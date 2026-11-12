@@ -18,6 +18,9 @@ h1{font-size:1.7rem;margin:2px 0 2px;letter-spacing:-.01em}
 nav{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0}
 nav a{font-size:.82rem;color:var(--mt);text-decoration:none;border:1px solid var(--ln);border-radius:20px;padding:4px 12px}
 nav a:hover{color:var(--tx);border-color:var(--mt)}
+nav a.botao{color:var(--on,#fff);background:var(--au);border-color:var(--au);font-weight:600}
+@media (prefers-color-scheme:dark){nav a.botao{color:#10151e}}
+.diahead{font-size:1rem;font-weight:700;color:var(--au);text-transform:uppercase;letter-spacing:.04em;margin:22px 0 10px;border-bottom:2px solid var(--au);padding-bottom:6px}
 .card{background:var(--cd);border:1px solid var(--ln);border-radius:12px;padding:16px 18px;margin:12px 0}
 .beat{display:inline-block;font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--au);border:1px solid var(--au);border-radius:4px;padding:1px 7px;margin-right:8px}
 .tipo{font-size:.72rem;color:var(--dt);text-transform:uppercase;letter-spacing:.05em}
@@ -103,25 +106,35 @@ function card(c){
     +'</div>';
 }
 
+function diaSemana(iso){
+  var dt=new Date(iso+"T12:00:00-03:00");if(isNaN(dt))return"";
+  var s=dt.toLocaleDateString("pt-BR",{weekday:"long",timeZone:"America/Sao_Paulo"});
+  return s.charAt(0).toUpperCase()+s.slice(1);
+}
+function foraItem(x){
+  return '<div class="card mini" style="padding:12px 16px"><span class="v">'+esc(x.veiculo)+'</span> '
+    +(x.url?'<a href="'+esc(x.url)+'" target="_blank" rel="noopener">'+esc(x.titulo)+'</a>':esc(x.titulo))
+    +(x.angulo?'<div class="ang">'+esc(x.angulo)+'</div>':'')+'</div>';
+}
+
 function montar(ed,te){
   var nav=document.getElementById("nav"),corpo=document.getElementById("corpo"),h="",secoes=[];
-  if(ed){
-    document.getElementById("selo").textContent=(ed.parcial?"Parcial · leitura de ":"Edição diária · leitura de ")+dataBR(ed.janela)+(ed.parcial?" (até agora)":"");
+  var dias=(ed&&ed.dias)||[];
+  if(dias.length){
+    var span=dias.length>1?(dataBR(dias[0].data)+" a "+dataBR(dias[dias.length-1].data)):dataBR(dias[0].data);
+    document.getElementById("selo").textContent=(ed.parcial?"Parcial · leitura de ":"Leitura de ")+span+(ed.parcial?" (até agora)":"");
     document.getElementById("quando").textContent="atualizada "+quandoBR(ed.geradoEm);
     document.getElementById("resumo").textContent=(ed.totalItens||0)+" matérias lidas ·";
-    secoes.push(["pautas","Pautas do dia"]);
-    h+='<section id="pautas">'+(ed.cards||[]).map(card).join("");
-    if(!(ed.cards||[]).length)h+='<div class="aviso">Dia fraco: nenhuma pauta forte fechou ontem.</div>';
-    h+='</section>';
-
-    if(ed.foraDoFutebol&&ed.foraDoFutebol.length){
-      secoes.push(["fora","Fora do futebol"]);
-      h+='<section id="fora"><div class="th">Fora do futebol</div>'+ed.foraDoFutebol.map(function(x){
-        return '<div class="card mini" style="padding:12px 16px"><span class="v">'+esc(x.veiculo)+'</span> '
-          +(x.url?'<a href="'+esc(x.url)+'" target="_blank" rel="noopener">'+esc(x.titulo)+'</a>':esc(x.titulo))
-          +(x.angulo?'<div class="ang">'+esc(x.angulo)+'</div>':'')+'</div>'
-      }).join("")+'</section>';
-    }
+    dias.forEach(function(dia,idx){
+      var id="dia"+idx,multi=dias.length>1;
+      secoes.push([id,multi?diaSemana(dia.data):"Pautas"]);
+      h+='<section id="'+id+'">';
+      if(multi)h+='<div class="diahead">'+esc(diaSemana(dia.data))+' · '+esc(dataBR(dia.data))+'</div>';
+      h+=(dia.cards||[]).map(card).join("");
+      if(!(dia.cards||[]).length)h+='<p style="color:var(--mt);font-style:italic">Dia fraco: nada forte neste dia.</p>';
+      if(dia.foraDoFutebol&&dia.foraDoFutebol.length)h+='<div class="th" style="margin-top:14px">Fora do futebol</div>'+dia.foraDoFutebol.map(foraItem).join("");
+      h+='</section>';
+    });
     if(ed.rotaDaSemana&&ed.rotaDaSemana.length){
       secoes.push(["rota","Rota da semana"]);
       h+='<section id="rota"><div class="th">Rota da semana</div><div class="rota">'+ed.rotaDaSemana.map(function(r){
@@ -129,7 +142,7 @@ function montar(ed,te){
       }).join("")+'</div></section>';
     }
   }else{
-    h+='<section><div class="aviso">A leitura do dia ainda não foi gerada (ela roda uma vez por dia). Veja o que está em alta agora, abaixo.</div></section>';
+    h+='<section><div class="aviso">A leitura ainda não foi gerada. Veja o que está em alta agora, abaixo, ou use "Rodar agora".</div></section>';
   }
 
   if(te&&te.trends){
@@ -150,7 +163,8 @@ function montar(ed,te){
   if(ed&&ed.fontesForaDoAlcance&&ed.fontesForaDoAlcance.length)
     h+='<p class="nota">Fora do alcance desta coleta: '+ed.fontesForaDoAlcance.map(esc).join("; ")+'.</p>';
 
-  nav.innerHTML=secoes.map(function(p){return '<a href="#'+p[0]+'">'+esc(p[1])+'</a>'}).join("");
+  nav.innerHTML=secoes.map(function(p){return '<a href="#'+p[0]+'">'+esc(p[1])+'</a>'}).join("")
+    +'<a class="botao" href="https://github.com/condedoro-tech/central/actions/workflows/editorial.yml" target="_blank" rel="noopener" title="Abre o GitHub; em Run workflow, escolha janela=hoje">Rodar agora ↗</a>';
   corpo.innerHTML=h;
 }
 

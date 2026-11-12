@@ -5,7 +5,7 @@ name: Leitura editorial do dia
 
 on:
   schedule:
-    - cron: "12 11 * * *"   # 08h12 em Brasília
+    - cron: "7 12 * * 1-5"   # 09h07 em Brasília, de segunda a sexta (na segunda, lê sex+sáb+dom)
   workflow_dispatch:
     inputs:
       teste:
@@ -16,6 +16,10 @@ on:
         description: "ontem (padrão) ou hoje (até agora, parcial)"
         required: false
         default: "ontem"
+      datas:
+        description: "Datas específicas AAAA-MM-DD separadas por vírgula (ex.: 2026-11-07,2026-11-08). Vazio = usa a janela."
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -44,7 +48,9 @@ jobs:
           CENTRAL_SENHA: ${{ secrets.CENTRAL_SENHA }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          if [ -n "${{ inputs.teste }}" ]; then
+          if [ -n "${{ inputs.datas }}" ]; then
+            python editor.py --datas=${{ inputs.datas }}
+          elif [ -n "${{ inputs.teste }}" ]; then
             python editor.py --teste
           elif [ "${{ inputs.janela }}" = "hoje" ]; then
             python editor.py --hoje

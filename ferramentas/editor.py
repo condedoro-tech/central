@@ -19,7 +19,7 @@ import os
 import re
 import sys
 import urllib.parse
-from datetime import timedelta
+from datetime import date, timedelta
 from email.utils import parsedate_to_datetime
 
 from tendencias import (BRT, CLUBES, GOOGLE, agora, baixar, cifrar, ge_home,
@@ -44,13 +44,13 @@ GE_OUTROS = {"Basquete": "basquete", "Fórmula 1": "f1", "Tênis": "tenis", "Vô
              "Lutas": "combate", "Atletismo": "atletismo", "Olímpicos": "olimpiadas"}
 
 
-def busca_clube(veiculo, site, clube, apelido):
-    return [dict(x, clube=clube) for x in busca(veiculo, site, f'"{clube}"', apelido)]
+def busca_clube(veiculo, site, clube, apelido, dias=1):
+    return [dict(x, clube=clube) for x in busca(veiculo, site, f'"{clube}"', apelido, dias)]
 
 
-def busca(veiculo, site, termo, apelido=None):
+def busca(veiculo, site, termo, apelido=None, dias=1):
     """Busca no Google News por site, preservando a URL (diferente do coletor ao vivo)."""
-    xml = baixar(GOOGLE.format(q=urllib.parse.quote(f"{termo} site:{site} when:1d"))) or ""
+    xml = baixar(GOOGLE.format(q=urllib.parse.quote(f"{termo} site:{site} when:{dias}d"))) or ""
     saida = []
     for item in re.findall(r"<item>(.*?)</item>", xml, re.S):
         m_data = re.search(r"<pubDate>(.*?)</pubDate>", item)
@@ -67,17 +67,22 @@ def busca(veiculo, site, termo, apelido=None):
     return saida
 
 
-def coletar_largo(alvo):
+def coletar_largo(alvos):
+    """Coleta uma janela larga o bastante para cobrir as datas-alvo e devolve os itens dessas datas.
+    alvos: lista de datas iso (ex.: ['2026-11-08','2026-11-09','2026-11-10'])."""
+    hoje = agora().astimezone(BRT).date()
+    dias = min(7, max(1, (hoje - min(date.fromisoformat(a) for a in alvos)).days + 1))
+    alvos = set(alvos)
     tarefas = [("ge home", lambda: [{"veiculo": "ge", "titulo": i["titulo"], "url": i["url"],
                                      "data": i["quando"][:10]} for i in ge_home()]),
                ("UOL home", lambda: [{"veiculo": "UOL", "titulo": i["titulo"], "url": i["url"],
                                      "data": i["quando"][:10]} for i in uol_home()])]
     for veiculo, site in PORTAIS:
-        tarefas.append((f"{veiculo} futebol", lambda v=veiculo, s=site: busca(v, s, "futebol")))
-        tarefas.append((f"{veiculo} seleção", lambda v=veiculo, s=site: busca(v, s, "seleção brasileira")))
+        tarefas.append((f"{veiculo} futebol", lambda v=veiculo, s=site: busca(v, s, "futebol", dias=dias)))
+        tarefas.append((f"{veiculo} seleção", lambda v=veiculo, s=site: busca(v, s, "seleção brasileira", dias=dias)))
         for clube in GRANDES:
             apelido = CLUBES[clube][1]
-            tarefas.append((f"{veiculo} {clube}", lambda v=veiculo, s=site, c=clube, a=apelido: busca_clube(v, s, c, a)))
+            tarefas.append((f"{veiculo} {clube}", lambda v=veiculo, s=site, c=clube, a=apelido: busca_clube(v, s, c, a, dias)))
     for nome, sec in GE_OUTROS.items():
         tarefas.append((f"ge {nome}", lambda sec=sec: [{"veiculo": "ge", "titulo": i["titulo"], "url": i["url"],
                         "data": i["quando"][:10], "naoFutebol": True} for i in ge_pagina(f"https://ge.globo.com/{sec}/")]))
@@ -89,12 +94,12 @@ def coletar_largo(alvo):
                 itens.extend(fut.result() or [])
             except Exception as erro:
                 falhas.append(f"{futuros[fut]}: {str(erro)[:80]}")
-    # filtra pela data-alvo (BRT) e tira repetidos (mesmo título normalizado no mesmo veículo)
+    # fica só com as datas-alvo e tira repetidos (mesmo título normalizado no mesmo veículo e dia)
     vistos, unicos = set(), []
     for i in itens:
-        if i.get("data") != alvo:
+        if i.get("data") not in alvos:
             continue
-        chave = (i["veiculo"], norm(i["titulo"]))
+        chave = (i["data"], i["veiculo"], norm(i["titulo"]))
         if chave not in vistos:
             vistos.add(chave)
             unicos.append(i)
@@ -191,28 +196,50 @@ def grounded(relatorio, urls_validas):
     return relatorio
 
 
+def datas_alvo(hoje_flag):
+    """Decide quais dias ler. Hoje (parcial) se --hoje; senão, na segunda lê sex+sáb+dom, nos demais lê ontem."""
+    hoje = agora().astimezone(BRT).date()
+    if hoje_flag:
+        return [hoje.isoformat()]
+    if hoje.weekday() == 0:                      # segunda-feira: sexta, sábado, domingo
+        return [(hoje - timedelta(days=d)).isoformat() for d in (3, 2, 1)]
+    return [(hoje - timedelta(days=1)).isoformat()]
+
+
 def main():
     teste = "--teste" in sys.argv
-    hoje_flag = "--hoje" in sys.argv          # janela = hoje até agora (parcial), em vez de ontem fechado
-    dias = 0 if hoje_flag else 1
-    alvo = (agora().astimezone(BRT) - timedelta(days=dias)).date().isoformat()
-    itens, falhas = coletar_largo(alvo)
-    texto = dossie(itens)
+    hoje_flag = "--hoje" in sys.argv
+    override = next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--datas=")), "")
+    alvos = override.split(",") if override else datas_alvo(hoje_flag)
+    itens, falhas = coletar_largo(alvos)
     if teste:
-        print(texto)
-        print(f"\n== {len(itens)} itens ({alvo}{' parcial' if hoje_flag else ''}) | falhas: {len(falhas)} ==")
+        for data in sorted(set(alvos)):
+            print(f"\n######## {data} ########")
+            print(dossie([i for i in itens if i["data"] == data]))
+        print(f"\n== {len(itens)} itens em {len(set(alvos))} dia(s) | falhas: {len(falhas)} ==")
         for f in falhas[:8]:
             print("  -", f)
         return
-    relatorio = chamar_claude(texto)
-    relatorio = grounded(relatorio, {i["url"] for i in itens if i.get("url")})
-    relatorio["geradoEm"] = agora().astimezone(BRT).isoformat(timespec="minutes")
-    relatorio["janela"] = alvo
-    relatorio["parcial"] = hoje_flag
-    relatorio["totalItens"] = len(itens)
-    relatorio["fontesForaDoAlcance"] = ["CazéTV (canal de YouTube, sem portal de texto)", "blogs independentes (não enumeráveis)"]
+
+    dias_saida, rota = [], []
+    for data in sorted(set(alvos)):
+        itens_dia = [i for i in itens if i["data"] == data]
+        if not itens_dia:
+            continue
+        rel = grounded(chamar_claude(dossie(itens_dia)), {i["url"] for i in itens_dia if i.get("url")})
+        dias_saida.append({"data": data, "cards": rel.get("cards", []), "foraDoFutebol": rel.get("foraDoFutebol", []),
+                           "totalItens": len(itens_dia)})
+        rota = rel.get("rotaDaSemana", []) or rota     # fica com a rota do dia mais recente que tiver
+    relatorio = {
+        "geradoEm": agora().astimezone(BRT).isoformat(timespec="minutes"),
+        "parcial": hoje_flag,
+        "dias": dias_saida,
+        "rotaDaSemana": rota,
+        "totalItens": len(itens),
+        "fontesForaDoAlcance": ["CazéTV (canal de YouTube, sem portal de texto)", "blogs independentes (não enumeráveis)"],
+    }
     json.dump(cifrar(json.dumps(relatorio, ensure_ascii=False)), open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "editorial.json"), "w", encoding="utf-8"))
-    print(f"editorial.json gravado | janela {alvo}{' parcial' if hoje_flag else ''} | {len(itens)} itens | modelo {MODELO}/{ESFORCO} | falhas {len(falhas)}")
+    print(f"editorial.json gravado | dias {','.join(d['data'] for d in dias_saida)}{' parcial' if hoje_flag else ''} | {len(itens)} itens | modelo {MODELO}/{ESFORCO} | falhas {len(falhas)}")
 
 
 if __name__ == "__main__":
