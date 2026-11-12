@@ -12,6 +12,10 @@ on:
         description: "Deixe 1 para só montar e imprimir o dossiê (sem IA, sem gravar, sem custo)"
         required: false
         default: ""
+      janela:
+        description: "ontem (padrão) ou hoje (até agora, parcial)"
+        required: false
+        default: "ontem"
 
 permissions:
   contents: write
@@ -42,6 +46,8 @@ jobs:
         run: |
           if [ -n "${{ inputs.teste }}" ]; then
             python editor.py --teste
+          elif [ "${{ inputs.janela }}" = "hoje" ]; then
+            python editor.py --hoje
           else
             python editor.py
           fi

@@ -106,7 +106,7 @@ function card(c){
 function montar(ed,te){
   var nav=document.getElementById("nav"),corpo=document.getElementById("corpo"),h="",secoes=[];
   if(ed){
-    document.getElementById("selo").textContent="Edição diária · leitura de "+dataBR(ed.janela);
+    document.getElementById("selo").textContent=(ed.parcial?"Parcial · leitura de ":"Edição diária · leitura de ")+dataBR(ed.janela)+(ed.parcial?" (até agora)":"");
     document.getElementById("quando").textContent="atualizada "+quandoBR(ed.geradoEm);
     document.getElementById("resumo").textContent=(ed.totalItens||0)+" matérias lidas ·";
     secoes.push(["pautas","Pautas do dia"]);

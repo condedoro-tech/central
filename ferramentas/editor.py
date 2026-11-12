@@ -67,7 +67,7 @@ def busca(veiculo, site, termo, apelido=None):
     return saida
 
 
-def coletar_largo():
+def coletar_largo(alvo):
     tarefas = [("ge home", lambda: [{"veiculo": "ge", "titulo": i["titulo"], "url": i["url"],
                                      "data": i["quando"][:10]} for i in ge_home()]),
                ("UOL home", lambda: [{"veiculo": "UOL", "titulo": i["titulo"], "url": i["url"],
@@ -89,17 +89,16 @@ def coletar_largo():
                 itens.extend(fut.result() or [])
             except Exception as erro:
                 falhas.append(f"{futuros[fut]}: {str(erro)[:80]}")
-    # só ONTEM (janela 00h-23h59 do dia anterior, BRT)
-    ontem = (agora().astimezone(BRT) - timedelta(days=1)).date().isoformat()
-    janela = [i for i in itens if i.get("data") == ontem]
-    # tira repetidos (mesmo título normalizado no mesmo veículo)
+    # filtra pela data-alvo (BRT) e tira repetidos (mesmo título normalizado no mesmo veículo)
     vistos, unicos = set(), []
-    for i in janela:
+    for i in itens:
+        if i.get("data") != alvo:
+            continue
         chave = (i["veiculo"], norm(i["titulo"]))
         if chave not in vistos:
             vistos.add(chave)
             unicos.append(i)
-    return unicos, ontem, falhas
+    return unicos, falhas
 
 
 def dossie(itens):
@@ -194,22 +193,26 @@ def grounded(relatorio, urls_validas):
 
 def main():
     teste = "--teste" in sys.argv
-    itens, ontem, falhas = coletar_largo()
+    hoje_flag = "--hoje" in sys.argv          # janela = hoje até agora (parcial), em vez de ontem fechado
+    dias = 0 if hoje_flag else 1
+    alvo = (agora().astimezone(BRT) - timedelta(days=dias)).date().isoformat()
+    itens, falhas = coletar_largo(alvo)
     texto = dossie(itens)
     if teste:
         print(texto)
-        print(f"\n== {len(itens)} itens de ontem ({ontem}) | falhas: {len(falhas)} ==")
+        print(f"\n== {len(itens)} itens ({alvo}{' parcial' if hoje_flag else ''}) | falhas: {len(falhas)} ==")
         for f in falhas[:8]:
             print("  -", f)
         return
     relatorio = chamar_claude(texto)
     relatorio = grounded(relatorio, {i["url"] for i in itens if i.get("url")})
     relatorio["geradoEm"] = agora().astimezone(BRT).isoformat(timespec="minutes")
-    relatorio["janela"] = ontem
+    relatorio["janela"] = alvo
+    relatorio["parcial"] = hoje_flag
     relatorio["totalItens"] = len(itens)
     relatorio["fontesForaDoAlcance"] = ["CazéTV (canal de YouTube, sem portal de texto)", "blogs independentes (não enumeráveis)"]
     json.dump(cifrar(json.dumps(relatorio, ensure_ascii=False)), open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "editorial.json"), "w", encoding="utf-8"))
-    print(f"editorial.json gravado | janela {ontem} | {len(itens)} itens | modelo {MODELO}/{ESFORCO} | falhas {len(falhas)}")
+    print(f"editorial.json gravado | janela {alvo}{' parcial' if hoje_flag else ''} | {len(itens)} itens | modelo {MODELO}/{ESFORCO} | falhas {len(falhas)}")
 
 
 if __name__ == "__main__":
