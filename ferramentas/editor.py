@@ -25,9 +25,11 @@ from email.utils import parsedate_to_datetime
 from tendencias import (BRT, CLUBES, GOOGLE, agora, baixar, cifrar, ge_home,
                         ge_pagina, limpar, norm, uol_home, PARALELO)
 
-# Troque MODELO para "claude-sonnet-5-5" para gastar ~metade (qualidade um pouco menor, ainda ótima).
-MODELO = "claude-opus-5-5"
+# Modelo: haiku-5-5 (mais barato, p/ testes) < sonnet-5-5 (equilíbrio) < opus-5-5 (melhor análise).
+MODELO = "claude-haiku-5-5"
 ESFORCO = "medium"          # low|medium|high|xhigh|max — mais alto = melhor análise e mais caro
+# Modelos que aceitam o fallback de refusal da Anthropic (haiku não aceita).
+FALLBACK_OK = {"claude-opus-5-5", "claude-sonnet-5-5", "claude-opus-5", "claude-fable-5-2", "claude-fable-5-1"}
 
 # Os 5 grandes do pedido (Parte 3). Reusa o apelido (regex) que já está em CLUBES.
 GRANDES = ["Corinthians", "Flamengo", "Palmeiras", "São Paulo", "Santos"]
@@ -163,13 +165,14 @@ Faça de 4 a 7 cards, priorizando dinheiro/tribunal/bastidor. foraDoFutebol: at�
 def chamar_claude(texto):
     from anthropic import Anthropic
     cliente = Anthropic()
+    extra = {"betas": ["server-side-fallback-2026-07-01"], "fallbacks": "default"} if MODELO in FALLBACK_OK else {}
     with cliente.beta.messages.stream(
         model=MODELO, max_tokens=32000,
         thinking={"type": "adaptive"},
         output_config={"effort": ESFORCO},
-        betas=["server-side-fallback-2026-07-01"], fallbacks="default",
         system=SISTEMA,
         messages=[{"role": "user", "content": f"Dossiê de ontem:\n\n{texto}\n\nMonte os cards de pauta no formato JSON pedido."}],
+        **extra,
     ) as fluxo:
         msg = fluxo.get_final_message()
     bruto = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
