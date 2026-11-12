@@ -34,9 +34,12 @@ GRANDES = ["Corinthians", "Flamengo", "Palmeiras", "São Paulo", "Santos"]
 # Fontes: as do Igor (ge/UOL/ESPN) + as novas que dá para coletar por busca de site.
 PORTAIS = [
     ("ge", "ge.globo.com"), ("UOL", "uol.com.br/esporte"), ("ESPN", "espn.com.br"),
-    ("Lance!", "lance.com.br"), ("Terra", "terra.com.br"), ("R7", "r7.com"),
+    ("Lance!", "lance.com.br"), ("Terra", "terra.com.br/esportes"), ("R7", "esportes.r7.com"),
     ("Goal", "goal.com"), ("TNT Sports", "tntsports.com.br"), ("Trivela", "trivela.com.br"),
 ]
+# Para o bloco "fora do futebol": outros esportes, nos 3 portais com cobertura ampla.
+OUTROS = ["NBA", "Fórmula 1", "tênis", "vôlei", "UFC"]
+PORTAIS_OUTROS = [("ge", "ge.globo.com"), ("UOL", "uol.com.br/esporte"), ("ESPN", "espn.com.br")]
 
 
 def busca_clube(veiculo, site, clube, apelido):
@@ -73,6 +76,9 @@ def coletar_largo():
         for clube in GRANDES:
             apelido = CLUBES[clube][1]
             tarefas.append((f"{veiculo} {clube}", lambda v=veiculo, s=site, c=clube, a=apelido: busca_clube(v, s, c, a)))
+    for veiculo, site in PORTAIS_OUTROS:
+        for termo in OUTROS:
+            tarefas.append((f"{veiculo} {termo}", lambda v=veiculo, s=site, t=termo: [dict(x, naoFutebol=True) for x in busca(v, s, t)]))
     itens, falhas = [], []
     with cf.ThreadPoolExecutor(PARALELO) as ex:
         futuros = {ex.submit(f): n for n, f in tarefas}
@@ -100,19 +106,26 @@ def dossie(itens):
     por_veiculo = {}
     for i in itens:
         por_veiculo.setdefault(i["veiculo"], []).append(i)
-    linhas.append("=== NOTICIÁRIO DE ONTEM POR VEÍCULO ===")
+    linhas.append("=== NOTICIÁRIO DE FUTEBOL DE ONTEM POR VEÍCULO ===")
     for v, lst in por_veiculo.items():
-        linhas.append(f"\n-- {v} ({len(lst)}) --")
-        for i in lst[:40]:
+        fut = [i for i in lst if not i.get("naoFutebol")]
+        if not fut:
+            continue
+        linhas.append(f"\n-- {v} ({len(fut)}) --")
+        for i in fut[:40]:
             linhas.append(f"[{i['data']}] {i['titulo']} | {i['url']}")
     for clube in GRANDES:
         rel = [i for i in itens if i.get("clube") == clube or re.search(CLUBES[clube][1], i["titulo"])]
         linhas.append(f"\n=== {clube.upper()} ({len(rel)}) ===")
         for i in rel[:25]:
             linhas.append(f"[{i['veiculo']} {i['data']}] {i['titulo']} | {i['url']}")
-    sel = [i for i in itens if re.search(r"sele[çc][ãa]o|CBF|Ancelotti|Brasil\b", i["titulo"])]
+    sel = [i for i in itens if not i.get("naoFutebol") and re.search(r"sele[çc][ãa]o|CBF|Ancelotti|Brasil\b", i["titulo"])]
     linhas.append(f"\n=== SELEÇÃO BRASILEIRA ({len(sel)}) ===")
     for i in sel[:25]:
+        linhas.append(f"[{i['veiculo']} {i['data']}] {i['titulo']} | {i['url']}")
+    fora = [i for i in itens if i.get("naoFutebol")]
+    linhas.append(f"\n=== FORA DO FUTEBOL (outros esportes) ({len(fora)}) ===")
+    for i in fora[:25]:
         linhas.append(f"[{i['veiculo']} {i['data']}] {i['titulo']} | {i['url']}")
     return "\n".join(linhas)
 
