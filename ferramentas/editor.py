@@ -37,9 +37,9 @@ PORTAIS = [
     ("Lance!", "lance.com.br"), ("Terra", "terra.com.br/esportes"), ("R7", "esportes.r7.com"),
     ("Goal", "goal.com"), ("TNT Sports", "tntsports.com.br"), ("Trivela", "trivela.com.br"),
 ]
-# Para o bloco "fora do futebol": outros esportes, nos 3 portais com cobertura ampla.
-OUTROS = ["NBA", "Fórmula 1", "tênis", "vôlei", "UFC"]
-PORTAIS_OUTROS = [("ge", "ge.globo.com"), ("UOL", "uol.com.br/esporte"), ("ESPN", "espn.com.br")]
+# Para o bloco "fora do futebol": páginas de seção do ge (garantem o esporte, com URL real).
+GE_OUTROS = {"Basquete": "basquete", "Fórmula 1": "f1", "Tênis": "tenis", "Vôlei": "volei",
+             "Lutas": "combate", "Atletismo": "atletismo", "Olímpicos": "olimpiadas"}
 
 
 def busca_clube(veiculo, site, clube, apelido):
@@ -76,9 +76,9 @@ def coletar_largo():
         for clube in GRANDES:
             apelido = CLUBES[clube][1]
             tarefas.append((f"{veiculo} {clube}", lambda v=veiculo, s=site, c=clube, a=apelido: busca_clube(v, s, c, a)))
-    for veiculo, site in PORTAIS_OUTROS:
-        for termo in OUTROS:
-            tarefas.append((f"{veiculo} {termo}", lambda v=veiculo, s=site, t=termo: [dict(x, naoFutebol=True) for x in busca(v, s, t)]))
+    for nome, sec in GE_OUTROS.items():
+        tarefas.append((f"ge {nome}", lambda sec=sec: [{"veiculo": "ge", "titulo": i["titulo"], "url": i["url"],
+                        "data": i["quando"][:10], "naoFutebol": True} for i in ge_pagina(f"https://ge.globo.com/{sec}/")]))
     itens, falhas = [], []
     with cf.ThreadPoolExecutor(PARALELO) as ex:
         futuros = {ex.submit(f): n for n, f in tarefas}
