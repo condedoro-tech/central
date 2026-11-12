@@ -1,50 +1,76 @@
 # Central
 
-Painel privado de tendências de futebol. Junta as buscas em alta de Esportes no Google Trends (4h e 24h) com o
-noticiário recente de UOL, ge e ESPN (incluindo as páginas dos 20 clubes da Série A), cruza um com o outro e mostra
-onde há busca sem cobertura. Tudo fica atrás de uma senha e o conteúdo é cifrado (AES-256-GCM); nada legível é publicado.
+Painel privado de esporte, atrás de senha e cifrado (AES-256-GCM); nada legível é publicado. Tem duas camadas:
 
-## Como funciona
+- **Leitura do dia** (1x/dia): uma coleta larga do noticiário de ontem (ge, UOL, ESPN, Lance!, Terra, R7, Goal, TNT Sports,
+  Trivela) vira um dossiê com veículo + data + URL de cada matéria, e o Claude escreve a análise — concorrência, os cinco
+  grandes e seleção — **só sobre os itens coletados** (cada afirmação carrega a fonte real, para você conferir num clique).
+- **Em alta agora** (a cada 2h): buscas de Esportes em alta no Google Trends cruzadas com a cobertura de UOL/ge/ESPN.
 
-- `ferramentas/tendencias.py` coleta os dados e grava `tendencias.json` **cifrado**. Roda sozinho no GitHub Actions
-  (`.github/workflows/tendencias.yml`), de 2 em 2 horas, sem depender do seu computador.
-- `index.html` é a tela de senha. Ela decifra, no seu navegador, a página interna (`conteudo/central.html`), que por sua
-  vez busca e decifra o `tendencias.json`. A senha nunca sai do navegador; o servidor só guarda bytes cifrados.
-- `ferramentas/montar.py` monta o `index.html` a partir de `conteudo/central.html` + a tela de senha.
+Fora do alcance: redes sociais (X/Instagram/TikTok/YouTube) não são monitoradas; CazéTV é canal de YouTube, sem portal de
+texto; "blogs independentes" é genérico demais para coletar. A página diz isso em vez de fingir.
 
-A chave vem da senha por PBKDF2-SHA256 (600000 iterações) com um sal público guardado no `index.html`. O mesmo sal é
-usado para cifrar o `tendencias.json`, por isso a página e os dados abrem com a mesma senha.
+## Arquivos
 
-## Primeira configuração
+| Arquivo | O que é |
+|---|---|
+| `ferramentas/tendencias.py` | Coletor "ao vivo" (Trends + UOL/ge/ESPN). Grava `tendencias.json` cifrado, a cada 2h. |
+| `ferramentas/editor.py` | Leitura do dia: coleta larga + Claude. Grava `editorial.json` cifrado, 1x/dia. |
+| `ferramentas/montar.py` + `modelo-senha.html` | Montam o `index.html` (tela de senha) a partir de `conteudo/central.html`. |
+| `conteudo/central.html` | A página interna, em blocos. |
+| `.github/workflows/` | `tendencias.yml` (2h) e `editorial.yml` (1x/dia). |
 
-1. Defina a sua senha e monte a página:
+A chave vem da senha por PBKDF2-SHA256 (600000 iterações) com um sal público no `index.html`. O mesmo sal cifra os dois
+JSON, por isso página e dados abrem com a mesma senha.
+
+## Configuração
+
+1. **Segredos no GitHub** (Settings → Secrets and variables → Actions):
+   - `CENTRAL_SENHA`: a senha da Central (a mesma do `montar.py`).
+   - `ANTHROPIC_API_KEY`: chave da sua conta Anthropic (console.anthropic.com). Só para a leitura do dia.
+2. **Montar a página** com a sua senha (uma vez) e commitar:
    ```bash
    pip install cryptography
-   CENTRAL_SENHA='sua-senha-aqui' python ferramentas/montar.py
+   CENTRAL_SENHA='sua-senha' python ferramentas/montar.py
+   git add index.html && git commit -m "index montado" && git push
    ```
-   Isso gera um sal novo na primeira vez e grava o `index.html`. Faça commit dele.
-2. No GitHub: Settings → Secrets and variables → Actions → New secret, nome `CENTRAL_SENHA`, com a **mesma** senha.
-3. Ative o GitHub Pages (Settings → Pages → branch `main`). A tela de senha fica em `https://SEU-USUARIO.github.io/central/`.
-4. Dispare o workflow uma vez (aba Actions → Tendencias de hoje → Run workflow) para gerar o primeiro `tendencias.json`.
+3. **Pages** (repositório público): Settings → Pages → branch `main`. Fica em `https://SEU-USUARIO.github.io/central/`.
+4. Dispare os dois workflows uma vez (aba Actions → Run workflow) para gerar os primeiros `tendencias.json` e `editorial.json`.
 
 ## Rodar na sua máquina
 
 ```bash
-pip install playwright cryptography
+pip install playwright cryptography anthropic
 python -m playwright install chromium
-python ferramentas/tendencias.py --teste      # só imprime, não cifra nem grava
-CENTRAL_SENHA='sua-senha' python ferramentas/tendencias.py   # grava tendencias.json cifrado
 ```
+
+```bash
+python ferramentas/tendencias.py --teste                 # Trends + cobertura, só imprime
+python ferramentas/editor.py --teste                     # monta o dossiê de ontem, sem IA, sem senha, de graça
+CENTRAL_SENHA=... ANTHROPIC_API_KEY=... python ferramentas/editor.py   # gera a leitura do dia cifrada
+```
+
+Use `--teste` no `editor.py` primeiro: ele mostra o dossiê que iria para a IA, sem gastar nada. Só depois rode a versão real.
+
+## Custo e modelo
+
+A leitura do dia é a única parte que custa (chamada de IA). Padrão: `claude-opus-5-5`, **~US$ 0,30–0,60/dia**. Para gastar
+~metade, troque uma linha no topo do `ferramentas/editor.py`:
+
+```python
+MODELO = "claude-sonnet-5-5"   # era "claude-opus-5-5"
+```
+
+`ESFORCO` (low/medium/high/...) no mesmo lugar regula profundidade × custo. O coletor "ao vivo" e a página são de graça.
 
 ## Trocar a senha
 
 ```bash
 CENTRAL_SENHA='nova-senha' python ferramentas/montar.py --sal-novo
 ```
-Gera um sal novo, remonta o `index.html` e **invalida o tendencias.json antigo** — rode o coletor de novo (e atualize o
-segredo `CENTRAL_SENHA` no GitHub) para regravá-lo com a nova chave.
+Gera sal novo e **invalida os JSON antigos** — atualize o segredo `CENTRAL_SENHA` e rode os dois workflows de novo.
 
 ## Limites de chamada
 
-O coletor tenta cada fonte no máximo **2 vezes** e desiste (sem insistir em 403/404/429), com pausa entre chamadas e
-no máximo 4 chamadas simultâneas. Fonte que falha entra em `falhas`, sem derrubar o resto.
+Os coletores tentam cada fonte no máximo **2 vezes** e desistem (sem insistir em 403/404/429), com pausa entre chamadas e
+no máximo 4 simultâneas. Fonte que falha entra na lista de falhas, sem derrubar o resto.

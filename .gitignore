@@ -1,3 +1,4 @@
-# gerados: rode ferramentas/montar.py e o coletor
+# gerados: rode ferramentas/montar.py e os coletores
 tendencias.json
+editorial.json
 __pycache__/

@@ -1,0 +1,50 @@
+# Leitura editorial do dia (pedido do dono).
+# Roda 1x/dia de manhã, quando "ontem" já fechou. Coleta larga + Claude escreve a análise. Grava editorial.json cifrado.
+# Precisa de dois segredos: CENTRAL_SENHA (chave da Central) e ANTHROPIC_API_KEY (conta da Anthropic).
+name: Leitura editorial do dia
+
+on:
+  schedule:
+    - cron: "12 11 * * *"   # 08h12 em Brasília
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: editorial
+  cancel-in-progress: false
+
+jobs:
+  editorial:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instala a cifra e o SDK da Anthropic
+        run: pip install --quiet anthropic cryptography
+
+      - name: Coleta de ontem, análise e grava cifrado
+        working-directory: ferramentas
+        env:
+          CENTRAL_SENHA: ${{ secrets.CENTRAL_SENHA }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python editor.py
+
+      - name: Publica o arquivo cifrado
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f editorial.json
+          if git diff --cached --quiet; then echo "Nada mudou"; exit 0; fi
+          git commit -m "Leitura editorial do dia"
+          for i in 1 2 3; do
+            git pull --rebase origin main && git push origin main && exit 0
+            sleep 10
+          done
+          exit 1

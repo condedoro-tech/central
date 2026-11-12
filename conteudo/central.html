@@ -4,46 +4,48 @@
 <meta name="robots" content="noindex,nofollow,noarchive">
 <title>Central</title>
 <style>
-:root{--bg:#f5f5f3;--cd:#fff;--tx:#111c2e;--mt:#5d6675;--ln:#e0e2e6;--ac:#111c2e;--al:#c0392b;--ok:#1b7f4b}
-@media (prefers-color-scheme:dark){:root{--bg:#10151e;--cd:#171d28;--tx:#eef0f3;--mt:#a0a7b3;--ln:#2a313c;--ac:#eef0f3;--al:#ff6b5e;--ok:#4cc38a}}
+:root{--bg:#f5f5f3;--cd:#fff;--tx:#111c2e;--mt:#5d6675;--ln:#e0e2e6;--ac:#111c2e;--al:#c0392b;--ok:#1b7f4b;--dt:#8a93a0}
+@media (prefers-color-scheme:dark){:root{--bg:#10151e;--cd:#171d28;--tx:#eef0f3;--mt:#a0a7b3;--ln:#2a313c;--ac:#eef0f3;--al:#ff6b5e;--ok:#4cc38a;--dt:#6c7482}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,sans-serif;padding:16px}
-.capa{max-width:760px;margin:0 auto}
-header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:4px}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,sans-serif;padding:16px}
+.capa{max-width:820px;margin:0 auto}
+header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
 h1{font-size:1.5rem;margin:0}
 .quando{color:var(--mt);font-size:.85rem}
-.abas{display:flex;gap:8px;margin:16px 0}
-.abas button{flex:1;padding:9px;font-size:.9rem;border:1px solid var(--ln);border-radius:8px;background:var(--cd);color:var(--tx);cursor:pointer}
-.abas button[aria-selected=true]{background:var(--ac);color:var(--bg);border-color:var(--ac)}
-h2{font-size:1rem;margin:22px 0 10px;color:var(--mt);text-transform:uppercase;letter-spacing:.04em}
-.item{background:var(--cd);border:1px solid var(--ln);border-radius:10px;padding:12px 14px;margin-bottom:10px}
-.item .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
-.termo{font-weight:600}
-.vol{color:var(--mt);font-size:.85rem;white-space:nowrap}
-.meta{color:var(--mt);font-size:.8rem;margin-top:2px}
-.tag{display:inline-block;font-size:.72rem;padding:1px 7px;border-radius:20px;margin:6px 6px 0 0;border:1px solid var(--ln)}
-.tag.alerta{color:var(--al);border-color:var(--al)}
-.tag.vazio{color:var(--mt)}
-.fontes{margin-top:8px;font-size:.85rem}
-.fontes a{color:var(--tx);text-decoration:none;display:block;padding:3px 0;border-top:1px solid var(--ln)}
-.fontes a:hover{color:var(--mt)}
-.fonte-rot{color:var(--mt);font-size:.72rem;text-transform:uppercase;margin-right:6px}
-.clube{display:flex;justify-content:space-between;align-items:center;background:var(--cd);border:1px solid var(--ln);border-radius:10px;padding:10px 14px;margin-bottom:8px}
-.clube b{font-weight:600}
-.placar{color:var(--mt);font-size:.82rem}
-.aviso{background:var(--cd);border:1px solid var(--al);color:var(--al);border-radius:10px;padding:12px 14px;margin-bottom:10px;font-size:.9rem}
-.rodape{color:var(--mt);font-size:.78rem;margin-top:24px;border-top:1px solid var(--ln);padding-top:12px}
-.sair{color:var(--mt);font-size:.82rem;background:none;border:0;cursor:pointer;text-decoration:underline}
+nav{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0 4px}
+nav a{font-size:.82rem;color:var(--mt);text-decoration:none;border:1px solid var(--ln);border-radius:20px;padding:4px 11px}
+nav a:hover{color:var(--tx);border-color:var(--mt)}
+section{margin:26px 0}
+h2{font-size:1.15rem;margin:0 0 4px;display:flex;align-items:baseline;gap:8px}
+h2 .n{color:var(--dt);font-size:.8rem;font-weight:400}
+.sub{color:var(--mt);font-size:.85rem;margin:0 0 12px}
+h3{font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--mt);margin:18px 0 8px}
+.card{background:var(--cd);border:1px solid var(--ln);border-radius:10px;padding:12px 14px;margin-bottom:9px}
+.card a.tit{color:var(--tx);text-decoration:none;font-weight:600;display:block}
+.card a.tit:hover{color:var(--mt)}
+.card .meta{color:var(--dt);font-size:.76rem;margin-top:3px}
+.card .diz{color:var(--mt);font-size:.9rem;margin-top:6px}
+.card .diz b{color:var(--tx);font-weight:600}
+.destaque{border-left:3px solid var(--ac)}
+.dia{background:var(--cd);border:1px solid var(--ln);border-radius:12px;padding:16px 18px}
+.dia p{margin:0 0 12px}.dia p:last-child{margin:0}
+.dia .rot{display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--mt);margin-bottom:2px}
+.clube{background:var(--cd);border:1px solid var(--ln);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+.clube>b{font-size:1.05rem}
+.vazio{color:var(--mt);font-size:.9rem;font-style:italic}
+.live{display:flex;gap:8px;flex-wrap:wrap}
+.live .t{background:var(--cd);border:1px solid var(--ln);border-radius:20px;padding:4px 11px;font-size:.82rem}
+.live .t .v{color:var(--dt)}
+.aviso{background:var(--cd);border:1px solid var(--al);color:var(--al);border-radius:10px;padding:12px 14px;font-size:.9rem}
+.nota{color:var(--dt);font-size:.78rem;margin-top:8px}
+.rodape{color:var(--mt);font-size:.78rem;margin-top:28px;border-top:1px solid var(--ln);padding-top:12px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.sair{color:var(--mt);font-size:.82rem;background:none;border:0;cursor:pointer;text-decoration:underline;padding:0}
 </style></head><body>
 <div class="capa">
 <header><h1>Central</h1><span class="quando" id="quando"></span></header>
-<div class="abas" id="abas">
-  <button data-h="4" aria-selected="true">Últimas 4h</button>
-  <button data-h="24" aria-selected="false">Últimas 24h</button>
-  <button data-h="clubes" aria-selected="false">Clubes</button>
-</div>
+<nav id="nav"></nav>
 <div id="corpo"></div>
-<p class="rodape"><span id="resumo"></span> · <button class="sair" id="sair">Sair deste aparelho</button></p>
+<p class="rodape"><span id="resumo"></span> <button class="sair" id="sair">Sair deste aparelho</button></p>
 </div>
 <script>
 (function(){
@@ -51,82 +53,114 @@ var KS="central-chave-sessao";
 function bin(b){return Uint8Array.from(atob(b),function(c){return c.charCodeAt(0)})}
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 
-function erroFatal(m){document.getElementById("corpo").innerHTML='<div class="aviso">'+esc(m)+'</div>'}
-
 var raw=null;try{raw=sessionStorage.getItem(KS)}catch(e){}
-if(!raw){erroFatal("Sessão expirou. Recarregue e entre de novo.");return}
+if(!raw){document.getElementById("corpo").innerHTML='<div class="aviso">Sessão expirou. Recarregue e entre de novo.</div>';return}
 
-fetch("tendencias.json",{cache:"no-store"}).then(function(r){
-  if(!r.ok)throw new Error("tendencias.json não encontrado ("+r.status+")");return r.json()
-}).then(function(pct){
-  return crypto.subtle.importKey("raw",bin(raw),"AES-GCM",false,["decrypt"]).then(function(chave){
-    return crypto.subtle.decrypt({name:"AES-GCM",iv:bin(pct.iv)},chave,bin(pct.dados))
-  })
-}).then(function(buf){
-  var dados=JSON.parse(new TextDecoder().decode(buf));
-  iniciar(dados)
-}).catch(function(e){erroFatal("Não consegui abrir os dados: "+e.message)});
-
-function iniciar(d){
-  document.getElementById("quando").textContent=formatarQuando(d.geradoEm);
-  document.getElementById("resumo").textContent=(d.totalManchetes||0)+" manchetes lidas"+((d.falhas&&d.falhas.length)?" · "+d.falhas.length+" fontes falharam":"");
-  var atual="4";
-  function pintar(){
-    document.querySelectorAll("#abas button").forEach(function(b){b.setAttribute("aria-selected",b.dataset.h===atual)});
-    document.getElementById("corpo").innerHTML = atual==="clubes" ? verClubes(d.clubesEmPauta||[]) : verTrends((d.trends||{})[atual]||{});
-  }
-  document.querySelectorAll("#abas button").forEach(function(b){b.addEventListener("click",function(){atual=b.dataset.h;pintar()})});
-  pintar();
+function abrir(nome){
+  return fetch(nome,{cache:"no-store"}).then(function(r){return r.ok?r.json():null}).then(function(pct){
+    if(!pct)return null;
+    return crypto.subtle.importKey("raw",bin(raw),"AES-GCM",false,["decrypt"]).then(function(k){
+      return crypto.subtle.decrypt({name:"AES-GCM",iv:bin(pct.iv)},k,bin(pct.dados))
+    }).then(function(buf){return JSON.parse(new TextDecoder().decode(buf))})
+  }).catch(function(){return null})
 }
 
-function formatarQuando(iso){
-  if(!iso)return"";var dt=new Date(iso);if(isNaN(dt))return iso;
-  return "atualizado "+dt.toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",timeZone:"America/Sao_Paulo"});
+Promise.all([abrir("editorial.json"),abrir("tendencias.json")]).then(function(r){
+  montar(r[0],r[1])
+}).catch(function(e){
+  document.getElementById("corpo").innerHTML='<div class="aviso">Não consegui abrir os dados: '+esc(e.message)+'</div>'
+});
+
+function dataBR(iso){if(!iso)return"";var p=String(iso).slice(0,10).split("-");return p.length===3?p[2]+"/"+p[1]:iso}
+function quandoBR(iso){if(!iso)return"";var dt=new Date(iso);if(isNaN(dt))return iso;
+  return dt.toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",timeZone:"America/Sao_Paulo"})}
+
+function item(it,diz){
+  var tit=it.url?'<a class="tit" href="'+esc(it.url)+'" target="_blank" rel="noopener">'+esc(it.titulo)+'</a>':'<span class="tit">'+esc(it.titulo)+'</span>';
+  var meta=[it.veiculo,dataBR(it.data)].filter(Boolean).map(esc).join(" · ");
+  return '<div class="card">'+tit+'<div class="meta">'+meta+'</div>'+(diz?'<div class="diz">'+diz+'</div>':'')+'</div>'
+}
+function lista(arr,fn,vazio){
+  if(!arr||!arr.length)return '<p class="vazio">'+esc(vazio||"Dia fraco aqui.")+'</p>';
+  return arr.map(fn).join("")
 }
 
-function verTrends(bloco){
-  if(bloco.status&&bloco.status!=="ok"){
-    var h='<div class="aviso">'+esc(bloco.aviso||"O Trends não carregou nesta rodada.")+'</div>';
-    if(!(bloco.itens&&bloco.itens.length))return h;
-  }
-  var itens=bloco.itens||[];
-  if(!itens.length)return '<div class="aviso">Sem buscas em alta nesta janela.</div>';
-  return itens.map(function(it){
-    var tags="";
-    if(it.ativo)tags+='<span class="tag" style="color:var(--ok);border-color:var(--ok)">ativa</span>';
-    if(it.uolAtras)tags+='<span class="tag alerta">UOL atrás</span>';
-    if(it.ninguemDeu)tags+='<span class="tag vazio">ninguém deu</span>';
-    var fontes="";
-    ["ge","UOL","ESPN"].forEach(function(f){
-      var cob=(it.cobertura||{})[f]||[];
-      cob.forEach(function(m){
-        fontes+= m.url ? '<a href="'+esc(m.url)+'" target="_blank" rel="noopener"><span class="fonte-rot">'+f+'</span>'+esc(m.titulo)+'</a>'
-                       : '<a><span class="fonte-rot">'+f+'</span>'+esc(m.titulo)+'</a>';
-      });
+function montar(ed,te){
+  var nav=document.getElementById("nav"),corpo=document.getElementById("corpo"),h="";
+  var secoes=[];
+  function sec(id,titulo){secoes.push([id,titulo])}
+
+  if(ed){
+    document.getElementById("quando").textContent="leitura de "+dataBR(ed.janela)+" · atualizada "+quandoBR(ed.geradoEm);
+    document.getElementById("resumo").textContent=(ed.totalItens||0)+" matérias lidas ·";
+    var f=ed.fechamento||{};
+    sec("dia","O dia");
+    h+='<section id="dia"><h2>O dia</h2><div class="dia">'
+      +(f.insight?'<p><span class="rot">Leitura</span>'+esc(f.insight)+'</p>':'')
+      +(f.alerta?'<p><span class="rot">De olho nas próximas 24h</span>'+esc(f.alerta)+'</p>':'')
+      +(f.aposta?'<p><span class="rot">Onde apostar</span>'+esc(f.aposta)+'</p>':'')
+      +'</div></section>';
+
+    var c=ed.concorrencia||{};
+    sec("concorrencia","Concorrência");
+    h+='<section id="concorrencia"><h2>Concorrência</h2><p class="sub">O que os outros portais deram ontem.</p>';
+    h+='<h3>O que mais pesou</h3>'+lista(c.principais,function(x){return item(x,x.porque?esc(x.porque):"")});
+    h+='<h3>Quem saiu na frente</h3>'+lista(c.furos,function(x){return item(x,(x.novo?'<b>Novo:</b> '+esc(x.novo)+'. ':'')+esc(x.porque||""))},"Ninguém cravou nada exclusivo.");
+    h+='<h3>Pode virar pauta</h3>'+lista(c.podeVirarPauta,function(x){return item(x,esc(x.angulo||""))});
+    h+='<h3>Fora do futebol</h3>'+lista(c.foraDoFutebol,function(x){return item(x,esc(x.angulo||""))});
+    h+='</section>';
+
+    sec("clubes","Os cinco grandes");
+    h+='<section id="clubes"><h2>Os cinco grandes</h2>';
+    (ed.clubes||[]).forEach(function(cl){
+      h+='<div class="clube"><b>'+esc(cl.clube)+'</b>';
+      h+='<h3>No radar</h3>'+lista(cl.materias,function(x){return item(x)});
+      if(cl.furos&&cl.furos.length)h+='<h3>Saiu na frente</h3>'+lista(cl.furos,function(x){return item(x,x.novo?'<b>Novo:</b> '+esc(x.novo):"")});
+      if(cl.pauta&&cl.pauta.ideia)h+='<h3>Ideia</h3><div class="card destaque"><span class="tit">'+esc(cl.pauta.ideia)+'</span>'+(cl.pauta.porque?'<div class="diz">'+esc(cl.pauta.porque)+'</div>':'')+'</div>';
+      h+='</div>';
     });
-    var c=it.contagem||{};
-    return '<div class="item"><div class="top"><span class="termo">'+esc(it.termo)+'</span>'
-      +'<span class="vol">'+esc(it.volume||"")+(it.alta?' · '+esc(it.alta):'')+'</span></div>'
-      +'<div class="meta">'+[it.inicio,it.durou,'ge '+(c.ge||0)+' · UOL '+(c.UOL||0)+' · ESPN '+(c.ESPN||0)].filter(Boolean).map(esc).join(" · ")+'</div>'
-      +tags
-      +(fontes?'<div class="fontes">'+fontes+'</div>':'')
-      +'</div>';
-  }).join("");
-}
+    if(!(ed.clubes||[]).length)h+='<p class="vazio">Sem movimento nos cinco ontem.</p>';
+    h+='</section>';
 
-function verClubes(lista){
-  if(!lista.length)return '<div class="aviso">Nenhum clube com movimento recente.</div>';
-  return lista.map(function(c){
-    var p=c.porFonte||{};
-    var manch=(c.manchetes||[]).map(function(m){
-      return m.url ? '<a href="'+esc(m.url)+'" target="_blank" rel="noopener"><span class="fonte-rot">'+esc(m.fonte)+'</span>'+esc(m.titulo)+'</a>'
-                   : '<a><span class="fonte-rot">'+esc(m.fonte)+'</span>'+esc(m.titulo)+'</a>';
-    }).join("");
-    return '<div class="item"><div class="top"><span class="termo">'+esc(c.clube)+'</span>'
-      +'<span class="vol">'+(c.total||0)+' manchetes</span></div>'
-      +'<div class="meta">ge '+(p.ge||0)+' · UOL '+(p.UOL||0)+' · ESPN '+(p.ESPN||0)+'</div>'
-      +(manch?'<div class="fontes">'+manch+'</div>':'')+'</div>';
-  }).join("");
+    var s=ed.selecao||{};var L=s.leitura||{};
+    sec("selecao","Seleção");
+    h+='<section id="selecao"><h2>Seleção</h2>';
+    h+='<h3>No radar</h3>'+lista(s.historias,function(x){return item(x)});
+    if(s.furo&&s.furo.titulo)h+='<h3>Saiu na frente</h3>'+item(s.furo,s.furo.novo?'<b>Novo:</b> '+esc(s.furo.novo):"");
+    if(L.risco||L.oportunidade||L.angulo){
+      h+='<h3>Leitura</h3><div class="dia">'
+        +(L.risco?'<p><span class="rot">Risco</span>'+esc(L.risco)+'</p>':'')
+        +(L.oportunidade?'<p><span class="rot">Oportunidade</span>'+esc(L.oportunidade)+'</p>':'')
+        +(L.angulo?'<p><span class="rot">Ângulo pouco explorado</span>'+esc(L.angulo)+'</p>':'')
+        +'</div>';
+    }
+    h+='</section>';
+  }else{
+    h+='<section><div class="aviso">A leitura editorial do dia ainda não foi gerada. Ela roda uma vez por dia; volte depois, ou veja o que está em alta agora abaixo.</div></section>';
+    document.getElementById("quando").textContent="";
+  }
+
+  // faixa ao vivo (tendencias.json, atualiza a cada 2h)
+  if(te&&te.trends){
+    sec("agora","Em alta agora");
+    h+='<section id="agora"><h2>Em alta agora <span class="n">atualizado '+esc(quandoBR(te.geradoEm))+'</span></h2><p class="sub">Buscas de Esportes em alta no Brasil (Google Trends).</p>';
+    [["4","últimas 4h"],["24","últimas 24h"]].forEach(function(par){
+      var b=te.trends[par[0]]||{};var its=b.itens||[];
+      h+='<h3>'+par[1]+'</h3>';
+      if(b.status&&b.status!=="ok"&&!its.length){h+='<p class="vazio">'+esc(b.aviso||"não carregou")+'</p>';return}
+      if(!its.length){h+='<p class="vazio">sem alta</p>';return}
+      h+='<div class="live">'+its.slice(0,12).map(function(it){
+        return '<span class="t">'+esc(it.termo)+(it.volume?' <span class="v">'+esc(it.volume)+'</span>':'')+(it.uolAtras?' <span class="v" style="color:var(--al)">UOL atrás</span>':'')+'</span>'
+      }).join("")+'</div>';
+    });
+    h+='</section>';
+  }
+
+  if(ed&&ed.fontesForaDoAlcance&&ed.fontesForaDoAlcance.length)
+    h+='<p class="nota">Fora do alcance desta coleta: '+ed.fontesForaDoAlcance.map(esc).join("; ")+'.</p>';
+
+  nav.innerHTML=secoes.map(function(p){return '<a href="#'+p[0]+'">'+esc(p[1])+'</a>'}).join("");
+  corpo.innerHTML=h;
 }
 
 document.getElementById("sair").addEventListener("click",function(){
