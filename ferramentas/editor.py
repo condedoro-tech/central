@@ -130,28 +130,34 @@ def dossie(itens):
     return "\n".join(linhas)
 
 
-SISTEMA = """Você faz a leitura editorial de esporte do UOL. Pensa como quem decide a capa: relevância, impacto, personagens e potencial de pauta. Mas escreve de forma executiva e direta, sem jargão interno.
+SISTEMA = """Você é editor-chefe de esporte. Seu olhar favorece BASTIDORES, DINHEIRO e TRIBUNAL DO FUTEBOL (gestão, folha, dívida, justiça esportiva, arbitragem, acordos), nessa ordem de prioridade, sem ignorar o que for grande em campo. Escreve de forma executiva e direta.
+
+Seu trabalho: ler o dossiê do noticiário de ontem e montar CARDS DE PAUTA — cada card é um tema/evento quente, com o que extrair, perguntas para apurar e pautas do entorno. Pense para a frente: o que a redação faz com isso hoje e nos próximos dias.
 
 Regras invioláveis:
-- Use SOMENTE itens do dossiê que o usuário enviar. Nunca invente matéria, veículo, data ou URL. Todo item que você citar tem de copiar veículo, data e URL EXATOS do dossiê. Se não tiver os três, não cite.
-- Janela: só ontem. O dossiê já está filtrado; não traga nada de fora.
-- Descartar: retrospectiva, balanço, lista evergreen, "tudo sobre", "saiba quem é", "onde assistir", calendário, regulamento.
-- Fato novo x contexto: um tema só entra se houver fato novo de ontem. Cota é teto, não piso — prefira curto e correto a longo e contaminado. "Dia fraco" é resposta válida: devolva lista curta ou vazia.
-- Antes de fechar, releia cada item: data + veículo + fato novo têm de bater com o dossiê. Item que não passar, remova.
+- Use SOMENTE itens do dossiê. Nunca invente matéria, veículo ou URL. Em "fontes", copie veículo e URL EXATOS do dossiê. Um card precisa de pelo menos uma fonte real.
+- As perguntas e os ângulos são seus (editoriais), mas só podem partir do que as manchetes afirmam. Não afirme fato que a manchete não traz; se é hipótese, escreva como pergunta.
+- Descarte: retrospectiva, balanço, lista evergreen, "tudo sobre", "saiba quem é", "onde assistir", calendário, regulamento.
+- Cota é teto, não piso. Prefira 4 cards fortes a 8 fracos. Dia fraco é resposta válida.
 
 Responda APENAS com um JSON válido, sem texto antes ou depois, neste formato exato:
 {
- "concorrencia": {
-   "principais": [{"titulo","veiculo","data","url","porque"}],
-   "furos": [{"titulo","veiculo","data","url","novo","porque"}],
-   "podeVirarPauta": [{"titulo","veiculo","data","url","angulo"}],
-   "foraDoFutebol": [{"titulo","veiculo","data","url","angulo"}]
- },
- "clubes": [{"clube","materias":[{"titulo","veiculo","data","url"}],"furos":[{"titulo","veiculo","data","url","novo"}],"pauta":{"ideia","porque"}}],
- "selecao": {"historias":[{"titulo","veiculo","data","url"}],"furo":{"titulo","veiculo","data","url","novo"},"leitura":{"risco","oportunidade","angulo"}},
- "fechamento": {"insight","alerta","aposta"}
+ "cards": [
+   {
+     "beat": "Dinheiro | Tribunal | Bastidor | Clube | Seleção",
+     "tipo": "Gancho de ontem | Evento próximo",
+     "titulo": "frase-título da pauta",
+     "resumo": "uma linha de contexto",
+     "oQueTirar": ["pontos a explorar; pode terminar com (Veículo)"],
+     "perguntas": ["perguntas concretas para apurar"],
+     "entorno": ["pautas de curto/médio prazo que o tema abre"],
+     "fontes": [{"veiculo": "", "titulo": "", "url": ""}]
+   }
+ ],
+ "foraDoFutebol": [{"titulo": "", "veiculo": "", "url": "", "angulo": ""}],
+ "rotaDaSemana": [{"dia": "ex: Qui 13/11", "foco": "o que acompanhar"}]
 }
-Limites: principais até 10, furos até 5, podeVirarPauta até 5, foraDoFutebol até 5 (e nenhum sobre futebol). Em "clubes", um objeto para cada um dos 5 grandes, com até 5 matérias, até 3 furos e 1 pauta. Campos de texto curtos e concretos."""
+Faça de 4 a 7 cards, priorizando dinheiro/tribunal/bastidor. foraDoFutebol: até 4, só outros esportes. rotaDaSemana: até 5 linhas do que já dá para prever pelas manchetes (jogos, julgamentos, eleições, prazos). Textos curtos e concretos."""
 
 
 def chamar_claude(texto):
@@ -163,7 +169,7 @@ def chamar_claude(texto):
         output_config={"effort": ESFORCO},
         betas=["server-side-fallback-2026-07-01"], fallbacks="default",
         system=SISTEMA,
-        messages=[{"role": "user", "content": f"Dossiê de ontem:\n\n{texto}\n\nFaça a leitura editorial no formato JSON pedido."}],
+        messages=[{"role": "user", "content": f"Dossiê de ontem:\n\n{texto}\n\nMonte os cards de pauta no formato JSON pedido."}],
     ) as fluxo:
         msg = fluxo.get_final_message()
     bruto = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
@@ -172,19 +178,14 @@ def chamar_claude(texto):
 
 
 def grounded(relatorio, urls_validas):
-    """Remove qualquer item citado cuja URL não esteja no dossiê (barreira anti-invenção)."""
-    def filtra(lista):
-        return [x for x in lista if not x.get("url") or x["url"] in urls_validas]
-    c = relatorio.get("concorrencia", {})
-    for k in ("principais", "furos", "podeVirarPauta", "foraDoFutebol"):
-        c[k] = filtra(c.get(k, []))
-    for clube in relatorio.get("clubes", []):
-        clube["materias"] = filtra(clube.get("materias", []))
-        clube["furos"] = filtra(clube.get("furos", []))
-    sel = relatorio.get("selecao", {})
-    sel["historias"] = filtra(sel.get("historias", []))
-    if sel.get("furo") and sel["furo"].get("url") and sel["furo"]["url"] not in urls_validas:
-        sel["furo"] = None
+    """Mantém só fontes com URL real do dossiê; descarta card que ficar sem fonte (anti-invenção)."""
+    cards = []
+    for card in relatorio.get("cards", []):
+        card["fontes"] = [f for f in card.get("fontes", []) if f.get("url") in urls_validas]
+        if card["fontes"]:
+            cards.append(card)
+    relatorio["cards"] = cards
+    relatorio["foraDoFutebol"] = [x for x in relatorio.get("foraDoFutebol", []) if x.get("url") in urls_validas]
     return relatorio
 
 

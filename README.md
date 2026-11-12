@@ -3,8 +3,9 @@
 Painel privado de esporte, atrás de senha e cifrado (AES-256-GCM); nada legível é publicado. Tem duas camadas:
 
 - **Leitura do dia** (1x/dia): uma coleta larga do noticiário de ontem (ge, UOL, ESPN, Lance!, Terra, R7, Goal, TNT Sports,
-  Trivela) vira um dossiê com veículo + data + URL de cada matéria, e o Claude escreve a análise — concorrência, os cinco
-  grandes e seleção — **só sobre os itens coletados** (cada afirmação carrega a fonte real, para você conferir num clique).
+  Trivela) vira um dossiê com veículo + data + URL de cada matéria, e o Claude monta **cards de pauta** (beat, o que tirar,
+  perguntas para levar, entorno, fontes) + "fora do futebol" + "rota da semana" — **só sobre os itens coletados** (cada card
+  carrega as fontes reais; card sem fonte é descartado). O olhar prioriza bastidores, dinheiro e tribunal do futebol.
 - **Em alta agora** (a cada 2h): buscas de Esportes em alta no Google Trends cruzadas com a cobertura de UOL/ge/ESPN.
 
 Fora do alcance: redes sociais (X/Instagram/TikTok/YouTube) não são monitoradas; CazéTV é canal de YouTube, sem portal de
