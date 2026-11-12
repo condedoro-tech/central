@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="pt-br"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>Central</title>
+<style>
+:root{--bg:#f5f5f3;--cd:#fff;--tx:#111c2e;--mt:#5d6675;--ln:#e0e2e6;--ac:#111c2e;--al:#c0392b;--ok:#1b7f4b}
+@media (prefers-color-scheme:dark){:root{--bg:#10151e;--cd:#171d28;--tx:#eef0f3;--mt:#a0a7b3;--ln:#2a313c;--ac:#eef0f3;--al:#ff6b5e;--ok:#4cc38a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,sans-serif;padding:16px}
+.capa{max-width:760px;margin:0 auto}
+header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:4px}
+h1{font-size:1.5rem;margin:0}
+.quando{color:var(--mt);font-size:.85rem}
+.abas{display:flex;gap:8px;margin:16px 0}
+.abas button{flex:1;padding:9px;font-size:.9rem;border:1px solid var(--ln);border-radius:8px;background:var(--cd);color:var(--tx);cursor:pointer}
+.abas button[aria-selected=true]{background:var(--ac);color:var(--bg);border-color:var(--ac)}
+h2{font-size:1rem;margin:22px 0 10px;color:var(--mt);text-transform:uppercase;letter-spacing:.04em}
+.item{background:var(--cd);border:1px solid var(--ln);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.item .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.termo{font-weight:600}
+.vol{color:var(--mt);font-size:.85rem;white-space:nowrap}
+.meta{color:var(--mt);font-size:.8rem;margin-top:2px}
+.tag{display:inline-block;font-size:.72rem;padding:1px 7px;border-radius:20px;margin:6px 6px 0 0;border:1px solid var(--ln)}
+.tag.alerta{color:var(--al);border-color:var(--al)}
+.tag.vazio{color:var(--mt)}
+.fontes{margin-top:8px;font-size:.85rem}
+.fontes a{color:var(--tx);text-decoration:none;display:block;padding:3px 0;border-top:1px solid var(--ln)}
+.fontes a:hover{color:var(--mt)}
+.fonte-rot{color:var(--mt);font-size:.72rem;text-transform:uppercase;margin-right:6px}
+.clube{display:flex;justify-content:space-between;align-items:center;background:var(--cd);border:1px solid var(--ln);border-radius:10px;padding:10px 14px;margin-bottom:8px}
+.clube b{font-weight:600}
+.placar{color:var(--mt);font-size:.82rem}
+.aviso{background:var(--cd);border:1px solid var(--al);color:var(--al);border-radius:10px;padding:12px 14px;margin-bottom:10px;font-size:.9rem}
+.rodape{color:var(--mt);font-size:.78rem;margin-top:24px;border-top:1px solid var(--ln);padding-top:12px}
+.sair{color:var(--mt);font-size:.82rem;background:none;border:0;cursor:pointer;text-decoration:underline}
+</style></head><body>
+<div class="capa">
+<header><h1>Central</h1><span class="quando" id="quando"></span></header>
+<div class="abas" id="abas">
+  <button data-h="4" aria-selected="true">Últimas 4h</button>
+  <button data-h="24" aria-selected="false">Últimas 24h</button>
+  <button data-h="clubes" aria-selected="false">Clubes</button>
+</div>
+<div id="corpo"></div>
+<p class="rodape"><span id="resumo"></span> · <button class="sair" id="sair">Sair deste aparelho</button></p>
+</div>
+<script>
+(function(){
+var KS="central-chave-sessao";
+function bin(b){return Uint8Array.from(atob(b),function(c){return c.charCodeAt(0)})}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+
+function erroFatal(m){document.getElementById("corpo").innerHTML='<div class="aviso">'+esc(m)+'</div>'}
+
+var raw=null;try{raw=sessionStorage.getItem(KS)}catch(e){}
+if(!raw){erroFatal("Sessão expirou. Recarregue e entre de novo.");return}
+
+fetch("tendencias.json",{cache:"no-store"}).then(function(r){
+  if(!r.ok)throw new Error("tendencias.json não encontrado ("+r.status+")");return r.json()
+}).then(function(pct){
+  return crypto.subtle.importKey("raw",bin(raw),"AES-GCM",false,["decrypt"]).then(function(chave){
+    return crypto.subtle.decrypt({name:"AES-GCM",iv:bin(pct.iv)},chave,bin(pct.dados))
+  })
+}).then(function(buf){
+  var dados=JSON.parse(new TextDecoder().decode(buf));
+  iniciar(dados)
+}).catch(function(e){erroFatal("Não consegui abrir os dados: "+e.message)});
+
+function iniciar(d){
+  document.getElementById("quando").textContent=formatarQuando(d.geradoEm);
+  document.getElementById("resumo").textContent=(d.totalManchetes||0)+" manchetes lidas"+((d.falhas&&d.falhas.length)?" · "+d.falhas.length+" fontes falharam":"");
+  var atual="4";
+  function pintar(){
+    document.querySelectorAll("#abas button").forEach(function(b){b.setAttribute("aria-selected",b.dataset.h===atual)});
+    document.getElementById("corpo").innerHTML = atual==="clubes" ? verClubes(d.clubesEmPauta||[]) : verTrends((d.trends||{})[atual]||{});
+  }
+  document.querySelectorAll("#abas button").forEach(function(b){b.addEventListener("click",function(){atual=b.dataset.h;pintar()})});
+  pintar();
+}
+
+function formatarQuando(iso){
+  if(!iso)return"";var dt=new Date(iso);if(isNaN(dt))return iso;
+  return "atualizado "+dt.toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",timeZone:"America/Sao_Paulo"});
+}
+
+function verTrends(bloco){
+  if(bloco.status&&bloco.status!=="ok"){
+    var h='<div class="aviso">'+esc(bloco.aviso||"O Trends não carregou nesta rodada.")+'</div>';
+    if(!(bloco.itens&&bloco.itens.length))return h;
+  }
+  var itens=bloco.itens||[];
+  if(!itens.length)return '<div class="aviso">Sem buscas em alta nesta janela.</div>';
+  return itens.map(function(it){
+    var tags="";
+    if(it.ativo)tags+='<span class="tag" style="color:var(--ok);border-color:var(--ok)">ativa</span>';
+    if(it.uolAtras)tags+='<span class="tag alerta">UOL atrás</span>';
+    if(it.ninguemDeu)tags+='<span class="tag vazio">ninguém deu</span>';
+    var fontes="";
+    ["ge","UOL","ESPN"].forEach(function(f){
+      var cob=(it.cobertura||{})[f]||[];
+      cob.forEach(function(m){
+        fontes+= m.url ? '<a href="'+esc(m.url)+'" target="_blank" rel="noopener"><span class="fonte-rot">'+f+'</span>'+esc(m.titulo)+'</a>'
+                       : '<a><span class="fonte-rot">'+f+'</span>'+esc(m.titulo)+'</a>';
+      });
+    });
+    var c=it.contagem||{};
+    return '<div class="item"><div class="top"><span class="termo">'+esc(it.termo)+'</span>'
+      +'<span class="vol">'+esc(it.volume||"")+(it.alta?' · '+esc(it.alta):'')+'</span></div>'
+      +'<div class="meta">'+[it.inicio,it.durou,'ge '+(c.ge||0)+' · UOL '+(c.UOL||0)+' · ESPN '+(c.ESPN||0)].filter(Boolean).map(esc).join(" · ")+'</div>'
+      +tags
+      +(fontes?'<div class="fontes">'+fontes+'</div>':'')
+      +'</div>';
+  }).join("");
+}
+
+function verClubes(lista){
+  if(!lista.length)return '<div class="aviso">Nenhum clube com movimento recente.</div>';
+  return lista.map(function(c){
+    var p=c.porFonte||{};
+    var manch=(c.manchetes||[]).map(function(m){
+      return m.url ? '<a href="'+esc(m.url)+'" target="_blank" rel="noopener"><span class="fonte-rot">'+esc(m.fonte)+'</span>'+esc(m.titulo)+'</a>'
+                   : '<a><span class="fonte-rot">'+esc(m.fonte)+'</span>'+esc(m.titulo)+'</a>';
+    }).join("");
+    return '<div class="item"><div class="top"><span class="termo">'+esc(c.clube)+'</span>'
+      +'<span class="vol">'+(c.total||0)+' manchetes</span></div>'
+      +'<div class="meta">ge '+(p.ge||0)+' · UOL '+(p.UOL||0)+' · ESPN '+(p.ESPN||0)+'</div>'
+      +(manch?'<div class="fontes">'+manch+'</div>':'')+'</div>';
+  }).join("");
+}
+
+document.getElementById("sair").addEventListener("click",function(){
+  try{localStorage.removeItem("central-chave");sessionStorage.removeItem(KS)}catch(e){}
+  location.reload();
+});
+})();
+</script></body></html>

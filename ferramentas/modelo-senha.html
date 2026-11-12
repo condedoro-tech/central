@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-br"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>Central</title>
+<style>
+:root{--bg:#f5f5f3;--tx:#111c2e;--mt:#5d6675;--ln:#c9ccd2;--ac:#111c2e;--on:#fff}
+@media (prefers-color-scheme:dark){:root{--bg:#10151e;--tx:#eef0f3;--mt:#a0a7b3;--ln:#3a4250;--ac:#eef0f3;--on:#10151e}}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:16px;background:var(--bg);color:var(--tx);font:16px system-ui,sans-serif}
+form{width:100%;max-width:340px}h1{font-size:1.4rem;margin:0 0 18px}label{display:block;font-size:.9rem;margin-bottom:6px}
+input[type=password]{width:100%;padding:12px;font-size:16px;border:1px solid var(--ln);border-radius:8px;background:transparent;color:var(--tx)}
+.lembrar{display:flex;gap:8px;align-items:center;margin:12px 0;color:var(--mt)}
+button{width:100%;padding:12px;font-size:16px;border:0;border-radius:8px;background:var(--ac);color:var(--on);cursor:pointer}
+button:disabled{opacity:.6}#erro{min-height:1.3em;margin:10px 0 0;color:#c0392b;font-size:.9rem}
+</style></head><body>
+<form id="f"><h1>Central</h1>
+<label for="s">Senha</label><input id="s" type="password" autocomplete="current-password" required autofocus>
+<div class="lembrar"><input id="l" type="checkbox"><label for="l" style="margin:0">Lembrar neste aparelho</label></div>
+<button id="b" type="submit">Entrar</button><p id="erro" role="alert"></p></form>
+<script>
+(function(){
+var SAL="__SAL__",IV="__IV__",DADOS="__DADOS__",IT=__IT__,K="central-chave",KS="central-chave-sessao";
+function bin(b){return Uint8Array.from(atob(b),function(c){return c.charCodeAt(0)})}
+function b64(u){var s="";new Uint8Array(u).forEach(function(c){s+=String.fromCharCode(c)});return btoa(s)}
+function abrir(chave){return crypto.subtle.decrypt({name:"AES-GCM",iv:bin(IV)},chave,bin(DADOS)).then(function(p){
+  var h=new TextDecoder().decode(p);document.open();document.write(h);document.close()})}
+function importar(raw){return crypto.subtle.importKey("raw",raw,"AES-GCM",false,["decrypt"])}
+function derivar(senha){var e=new TextEncoder();return crypto.subtle.importKey("raw",e.encode(senha),"PBKDF2",false,["deriveBits"]).then(function(m){
+  return crypto.subtle.deriveBits({name:"PBKDF2",salt:bin(SAL),iterations:IT,hash:"SHA-256"},m,256)})}
+var guardada=null;try{guardada=localStorage.getItem(K)}catch(e){}
+if(guardada){try{sessionStorage.setItem(KS,guardada)}catch(e){}importar(bin(guardada)).then(abrir).catch(function(){try{localStorage.removeItem(K)}catch(e){}})}
+document.getElementById("f").addEventListener("submit",function(ev){ev.preventDefault();
+  var b=document.getElementById("b"),erro=document.getElementById("erro");b.disabled=true;b.textContent="Abrindo...";erro.textContent="";
+  derivar(document.getElementById("s").value.trim()).then(function(raw){
+    var lembrar=document.getElementById("l").checked;
+    try{sessionStorage.setItem(KS,b64(raw))}catch(e){}
+    return importar(raw).then(abrir).then(function(){if(lembrar){try{localStorage.setItem(K,b64(raw))}catch(e){}}})
+  }).catch(function(){b.disabled=false;b.textContent="Entrar";erro.textContent="Senha incorreta."})});
+})();
+</script></body></html>
