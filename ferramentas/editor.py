@@ -1,17 +1,20 @@
-"""Leitura editorial do dia da Central (roda 1x/dia no GitHub Actions).
+"""Radar UOL Esporte — leitura comparativa UOL x concorrência (roda no GitHub Actions).
 
-Faz uma coleta larga do noticiário de ONTEM (ge, UOL, ESPN, Lance!, Terra, R7, Goal, TNT Sports, Trivela),
-monta um dossiê com veículo + data + URL de cada item e pede ao Claude uma leitura editorial — concorrência,
-5 grandes clubes e seleção — SÓ sobre os itens coletados. Grava editorial.json cifrado com a chave da Central.
+Duas análises, geradas a partir da coleta do noticiário:
+  PARTE 1 — Balanço de ontem (dia fechado 00h-23h59): os assuntos mais importantes do dia e, em cada um,
+            como o UOL se saiu frente à concorrência (liderou / em linha / atrás / furo da concorrência).
+  PARTE 2 — Correr atrás hoje (00h até a hora da raspagem): o que a concorrência publicou e o UOL precisa
+            perseguir. Sempre um card para cada um dos 5 (Corinthians, Flamengo, Palmeiras, São Paulo, Santos),
+            depois outros assuntos; detalhe proporcional à importância.
 
-Regras herdadas do pedido do dono:
-- Janela: 00h00 às 23h59 de ONTEM (BRT). Item fora da janela é descartado.
-- Todo item citado carrega veículo, data e URL reais; o que não tem os três é descartado (anti-invenção).
-- Cotas são tetos, não pisos. "Dia fraco" é resposta válida.
-- Não monitora redes sociais: a Parte 2 do pedido foi deliberadamente cortada.
+Fontes: UOL (nosso veículo, coletado com reforço) e concorrência (ge, ESPN, Lance!, Terra, R7, Goal, TNT, Trivela).
+Regra anti-invenção: todo item citado carrega veículo + URL reais do dossiê; o que não tem URL é descartado.
+Hedge: quando o UOL não aparece no dossiê sobre um assunto, o card diz "não localizado no UOL (conferir)",
+nunca "o UOL não deu".
 
-Uso: CENTRAL_SENHA=... ANTHROPIC_API_KEY=... python ferramentas/editor.py     grava editorial.json cifrado
-     python ferramentas/editor.py --teste                                       só monta e imprime o dossiê (sem IA, sem senha)
+Uso: CENTRAL_SENHA=... ANTHROPIC_API_KEY=... python ferramentas/editor.py            balanço de ontem + correr atrás hoje
+     python ferramentas/editor.py --so-hoje                                           só a Parte 2 (hoje), mais rápido
+     python ferramentas/editor.py --teste                                             imprime os dossiês (sem IA, sem senha)
 """
 import concurrent.futures as cf
 import json
@@ -23,33 +26,26 @@ from datetime import date, timedelta
 from email.utils import parsedate_to_datetime
 
 from tendencias import (BRT, CLUBES, GOOGLE, agora, baixar, cifrar, ge_home,
-                        ge_pagina, limpar, norm, uol_home, PARALELO)
+                        limpar, norm, uol_home, PARALELO)
 
 # Modelo: haiku-5-5 (mais barato, p/ testes) < sonnet-5-5 (equilíbrio) < opus-5-5 (melhor análise).
 MODELO = "claude-haiku-5-5"
-ESFORCO = "medium"          # low|medium|high|xhigh|max — mais alto = melhor análise e mais caro
-# Modelos que aceitam o fallback de refusal da Anthropic (haiku não aceita).
+ESFORCO = "medium"
 FALLBACK_OK = {"claude-opus-5-5", "claude-sonnet-5-5", "claude-opus-5", "claude-fable-5-2", "claude-fable-5-1"}
 
-# Os 5 grandes do pedido (Parte 3). Reusa o apelido (regex) que já está em CLUBES.
 GRANDES = ["Corinthians", "Flamengo", "Palmeiras", "São Paulo", "Santos"]
-# Fontes: as do Igor (ge/UOL/ESPN) + as novas que dá para coletar por busca de site.
+# Concorrência (o UOL é tratado à parte, como nosso veículo).
 PORTAIS = [
-    ("ge", "ge.globo.com"), ("UOL", "uol.com.br/esporte"), ("ESPN", "espn.com.br"),
-    ("Lance!", "lance.com.br"), ("Terra", "terra.com.br/esportes"), ("R7", "esportes.r7.com"),
+    ("ge", "ge.globo.com"), ("ESPN", "espn.com.br"), ("Lance!", "lance.com.br"),
+    ("Terra", "terra.com.br/esportes"), ("R7", "esportes.r7.com"),
     ("Goal", "goal.com"), ("TNT Sports", "tntsports.com.br"), ("Trivela", "trivela.com.br"),
 ]
-# Para o bloco "fora do futebol": páginas de seção do ge (garantem o esporte, com URL real).
-GE_OUTROS = {"Basquete": "basquete", "Fórmula 1": "f1", "Tênis": "tenis", "Vôlei": "volei",
-             "Lutas": "combate", "Atletismo": "atletismo", "Olímpicos": "olimpiadas"}
-
-
-def busca_clube(veiculo, site, clube, apelido, dias=1):
-    return [dict(x, clube=clube) for x in busca(veiculo, site, f'"{clube}"', apelido, dias)]
+# Reforço de coleta do UOL (nosso ponto de referência): além da home, buscas por temas.
+UOL_TEMAS = ["futebol", "seleção brasileira", "mercado da bola", "Brasileirão", "Libertadores", "Copa do Brasil", "CBF STJD"]
 
 
 def busca(veiculo, site, termo, apelido=None, dias=1):
-    """Busca no Google News por site, preservando a URL (diferente do coletor ao vivo)."""
+    """Busca no Google News por site, preservando a URL."""
     xml = baixar(GOOGLE.format(q=urllib.parse.quote(f"{termo} site:{site} when:{dias}d"))) or ""
     saida = []
     for item in re.findall(r"<item>(.*?)</item>", xml, re.S):
@@ -67,25 +63,30 @@ def busca(veiculo, site, termo, apelido=None, dias=1):
     return saida
 
 
+def busca_clube(veiculo, site, clube, apelido, dias=1):
+    return [dict(x, clube=clube) for x in busca(veiculo, site, f'"{clube}"', apelido, dias)]
+
+
 def coletar_largo(alvos):
-    """Coleta uma janela larga o bastante para cobrir as datas-alvo e devolve os itens dessas datas.
-    alvos: lista de datas iso (ex.: ['2026-11-08','2026-11-09','2026-11-10'])."""
+    """Coleta janela larga o bastante para cobrir as datas-alvo; devolve itens dessas datas (UOL marcado)."""
     hoje = agora().astimezone(BRT).date()
     dias = min(7, max(1, (hoje - min(date.fromisoformat(a) for a in alvos)).days + 1))
     alvos = set(alvos)
-    tarefas = [("ge home", lambda: [{"veiculo": "ge", "titulo": i["titulo"], "url": i["url"],
-                                     "data": i["quando"][:10]} for i in ge_home()]),
-               ("UOL home", lambda: [{"veiculo": "UOL", "titulo": i["titulo"], "url": i["url"],
-                                     "data": i["quando"][:10]} for i in uol_home()])]
+    tarefas = [("ge home", lambda: [{"veiculo": "ge", "titulo": i["titulo"], "url": i["url"], "data": i["quando"][:10]} for i in ge_home()]),
+               ("UOL home", lambda: [{"veiculo": "UOL", "titulo": i["titulo"], "url": i["url"], "data": i["quando"][:10]} for i in uol_home()])]
+    # concorrência: futebol + seleção + 5 grandes
     for veiculo, site in PORTAIS:
         tarefas.append((f"{veiculo} futebol", lambda v=veiculo, s=site: busca(v, s, "futebol", dias=dias)))
         tarefas.append((f"{veiculo} seleção", lambda v=veiculo, s=site: busca(v, s, "seleção brasileira", dias=dias)))
         for clube in GRANDES:
             apelido = CLUBES[clube][1]
             tarefas.append((f"{veiculo} {clube}", lambda v=veiculo, s=site, c=clube, a=apelido: busca_clube(v, s, c, a, dias)))
-    for nome, sec in GE_OUTROS.items():
-        tarefas.append((f"ge {nome}", lambda sec=sec: [{"veiculo": "ge", "titulo": i["titulo"], "url": i["url"],
-                        "data": i["quando"][:10], "naoFutebol": True} for i in ge_pagina(f"https://ge.globo.com/{sec}/")]))
+    # reforço UOL: temas + 5 grandes
+    for tema in UOL_TEMAS:
+        tarefas.append((f"UOL {tema}", lambda t=tema: busca("UOL", "uol.com.br/esporte", t, dias=dias)))
+    for clube in GRANDES:
+        apelido = CLUBES[clube][1]
+        tarefas.append((f"UOL {clube}", lambda c=clube, a=apelido: busca_clube("UOL", "uol.com.br/esporte", c, a, dias)))
     itens, falhas = [], []
     with cf.ThreadPoolExecutor(PARALELO) as ex:
         futuros = {ex.submit(f): n for n, f in tarefas}
@@ -94,7 +95,6 @@ def coletar_largo(alvos):
                 itens.extend(fut.result() or [])
             except Exception as erro:
                 falhas.append(f"{futuros[fut]}: {str(erro)[:80]}")
-    # fica só com as datas-alvo e tira repetidos (mesmo título normalizado no mesmo veículo e dia)
     vistos, unicos = set(), []
     for i in itens:
         if i.get("data") not in alvos:
@@ -107,139 +107,145 @@ def coletar_largo(alvos):
 
 
 def dossie(itens):
-    """Texto compacto por veículo + blocos de clubes e seleção, com veículo|data|url em cada linha."""
+    """Dossiê com o UOL destacado como nosso veículo, concorrência por veículo, e blocos por clube e seleção."""
     linhas = []
+    uol = [i for i in itens if i["veiculo"] == "UOL"]
+    linhas.append(f"### NOSSO VEÍCULO — UOL ({len(uol)}) ###")
+    for i in uol[:60]:
+        linhas.append(f"[UOL {i['data']}] {i['titulo']} | {i['url']}")
+    linhas.append("\n### CONCORRÊNCIA (por veículo) ###")
     por_veiculo = {}
     for i in itens:
-        por_veiculo.setdefault(i["veiculo"], []).append(i)
-    linhas.append("=== NOTICIÁRIO DE FUTEBOL DE ONTEM POR VEÍCULO ===")
+        if i["veiculo"] != "UOL":
+            por_veiculo.setdefault(i["veiculo"], []).append(i)
     for v, lst in por_veiculo.items():
-        fut = [i for i in lst if not i.get("naoFutebol")]
-        if not fut:
-            continue
-        linhas.append(f"\n-- {v} ({len(fut)}) --")
-        for i in fut[:40]:
+        linhas.append(f"\n-- {v} ({len(lst)}) --")
+        for i in lst[:35]:
             linhas.append(f"[{i['data']}] {i['titulo']} | {i['url']}")
     for clube in GRANDES:
         rel = [i for i in itens if i.get("clube") == clube or re.search(CLUBES[clube][1], i["titulo"])]
-        linhas.append(f"\n=== {clube.upper()} ({len(rel)}) ===")
-        for i in rel[:25]:
+        linhas.append(f"\n### CLUBE: {clube.upper()} ({len(rel)}) — UOL e concorrência ###")
+        for i in rel[:30]:
             linhas.append(f"[{i['veiculo']} {i['data']}] {i['titulo']} | {i['url']}")
-    sel = [i for i in itens if not i.get("naoFutebol") and re.search(r"sele[çc][ãa]o|CBF|Ancelotti|Brasil\b", i["titulo"])]
-    linhas.append(f"\n=== SELEÇÃO BRASILEIRA ({len(sel)}) ===")
+    sel = [i for i in itens if re.search(r"sele[çc][ãa]o|CBF|Ancelotti", i["titulo"])]
+    linhas.append(f"\n### SELEÇÃO ({len(sel)}) — UOL e concorrência ###")
     for i in sel[:25]:
-        linhas.append(f"[{i['veiculo']} {i['data']}] {i['titulo']} | {i['url']}")
-    fora = [i for i in itens if i.get("naoFutebol")]
-    linhas.append(f"\n=== FORA DO FUTEBOL (outros esportes) ({len(fora)}) ===")
-    for i in fora[:25]:
         linhas.append(f"[{i['veiculo']} {i['data']}] {i['titulo']} | {i['url']}")
     return "\n".join(linhas)
 
 
-SISTEMA = """Você é editor-chefe de esporte. Seu olhar favorece BASTIDORES, DINHEIRO e TRIBUNAL DO FUTEBOL (gestão, folha, dívida, justiça esportiva, arbitragem, acordos), nessa ordem de prioridade, sem ignorar o que for grande em campo. Escreve de forma executiva e direta.
-
-Seu trabalho: ler o dossiê do noticiário de ontem e montar CARDS DE PAUTA — cada card é um tema/evento quente, com o que extrair, perguntas para apurar e pautas do entorno. Pense para a frente: o que a redação faz com isso hoje e nos próximos dias.
-
+COMUM = """No dossiê, o bloco "NOSSO VEÍCULO — UOL" é o UOL; todos os outros (ge, ESPN, Lance!, Terra, R7, Goal, TNT Sports, Trivela) são CONCORRÊNCIA.
 Regras invioláveis:
-- Use SOMENTE itens do dossiê. Nunca invente matéria, veículo ou URL. Em "fontes", copie veículo e URL EXATOS do dossiê. Um card precisa de pelo menos uma fonte real.
-- As perguntas e os ângulos são seus (editoriais), mas só podem partir do que as manchetes afirmam. Não afirme fato que a manchete não traz; se é hipótese, escreva como pergunta.
-- Descarte: retrospectiva, balanço, lista evergreen, "tudo sobre", "saiba quem é", "onde assistir", calendário, regulamento.
-- Cota é teto, não piso. Prefira 4 cards fortes a 8 fracos. Dia fraco é resposta válida.
+- Use SOMENTE itens do dossiê. Toda URL citada é copiada EXATA do dossiê. Item sem URL real não entra.
+- Descartar: "onde assistir", calendário, regulamento, retrospectiva, "tudo sobre".
+- Hedge do UOL: só diga que o UOL deu (uolDeu=true, com uolUrl do bloco UOL) se achar a matéria no bloco UOL. Se não achar, uolDeu=false (= "não localizado no UOL, conferir"). NUNCA afirme que o UOL não deu."""
 
-Responda APENAS com um JSON válido, sem texto antes ou depois, neste formato exato:
-{
- "cards": [
-   {
-     "beat": "Dinheiro | Tribunal | Bastidor | Clube | Seleção",
-     "tipo": "Gancho de ontem | Evento próximo",
-     "titulo": "frase-título da pauta",
-     "resumo": "uma linha de contexto",
-     "oQueTirar": ["pontos a explorar; pode terminar com (Veículo)"],
-     "perguntas": ["perguntas concretas para apurar"],
-     "entorno": ["pautas de curto/médio prazo que o tema abre"],
-     "fontes": [{"veiculo": "", "titulo": "", "url": ""}]
-   }
- ],
- "foraDoFutebol": [{"titulo": "", "veiculo": "", "url": "", "angulo": ""}],
- "rotaDaSemana": [{"dia": "ex: Qui 13/11", "foco": "o que acompanhar"}]
-}
-Faça de 4 a 7 cards, priorizando dinheiro/tribunal/bastidor. foraDoFutebol: até 4, só outros esportes. rotaDaSemana: até 5 linhas do que já dá para prever pelas manchetes (jogos, julgamentos, eleições, prazos). Textos curtos e concretos."""
+SISTEMA_BALANCO = COMUM + """
+Tarefa: a partir do que saiu ONTEM, liste de 6 a 10 assuntos mais importantes do dia e avalie a cobertura do UOL frente à concorrência.
+veredito, por assunto: "UOL liderou" (deu primeiro/mais completo), "UOL em linha" (deu junto da concorrência), "UOL atrás" (concorrência deu e o UOL não aparece ou deu pouco), "Furo da concorrência" (assunto forte que só a concorrência deu).
+Responda APENAS JSON válido:
+{"assuntos":[{"titulo":"","resumo":"","veredito":"","uolDeu":true,"uolUrl":"","concorrentes":[{"veiculo":"","url":""}],"comentario":"avaliação curta UOL x concorrência"}],
+ "placar":"uma linha: onde o UOL ganhou e onde ficou atrás no dia"}"""
+
+SISTEMA_CORRER = COMUM + """
+Tarefa: montar a lista de prioridades do que o UOL precisa CORRER ATRÁS hoje, a partir do que a concorrência publicou até agora.
+- SEMPRE um card para cada um dos 5, nesta ordem: Corinthians, Flamengo, Palmeiras, São Paulo, Santos. Sem novidade relevante: prioridade "baixa", novidade=false, resumo "sem novidade da concorrência; UOL em dia".
+- Depois, "outros": assuntos importantes (seleção, mercado, tribunal, outro clube).
+- prioridade "alta"/"media"/"baixa" conforme importância. Quanto mais importante, mais detalhe: em "alta" preencha concorrencia (o que o rival deu, com url) e apurar (o que o UOL deve correr atrás); em "baixa", só resumo curto.
+Responda APENAS JSON válido:
+{"clubes":[{"clube":"","prioridade":"","novidade":true,"titulo":"","resumo":"","concorrencia":[{"veiculo":"","url":"","oque":""}],"uolDeu":false,"uolUrl":"","apurar":[""]}],
+ "outros":[{"tema":"","prioridade":"","titulo":"","resumo":"","concorrencia":[{"veiculo":"","url":"","oque":""}],"uolDeu":false,"uolUrl":"","apurar":[""]}]}"""
 
 
-def chamar_claude(texto):
+def chamar_claude(texto, sistema):
     from anthropic import Anthropic
     cliente = Anthropic()
     extra = {"betas": ["server-side-fallback-2026-07-01"], "fallbacks": "default"} if MODELO in FALLBACK_OK else {}
     with cliente.beta.messages.stream(
-        model=MODELO, max_tokens=32000,
-        thinking={"type": "adaptive"},
-        output_config={"effort": ESFORCO},
-        system=SISTEMA,
-        messages=[{"role": "user", "content": f"Dossiê de ontem:\n\n{texto}\n\nMonte os cards de pauta no formato JSON pedido."}],
+        model=MODELO, max_tokens=32000, thinking={"type": "adaptive"},
+        output_config={"effort": ESFORCO}, system=sistema,
+        messages=[{"role": "user", "content": f"Dossiê:\n\n{texto}\n\nResponda no formato JSON pedido."}],
         **extra,
     ) as fluxo:
         msg = fluxo.get_final_message()
     bruto = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
-    inicio, fim = bruto.find("{"), bruto.rfind("}")
-    return json.loads(bruto[inicio:fim + 1])
+    i, f = bruto.find("{"), bruto.rfind("}")
+    return json.loads(bruto[i:f + 1])
 
 
-def grounded(relatorio, urls_validas):
-    """Mantém só fontes com URL real do dossiê; descarta card que ficar sem fonte (anti-invenção)."""
-    cards = []
-    for card in relatorio.get("cards", []):
-        card["fontes"] = [f for f in card.get("fontes", []) if f.get("url") in urls_validas]
-        if card["fontes"]:
-            cards.append(card)
-    relatorio["cards"] = cards
-    relatorio["foraDoFutebol"] = [x for x in relatorio.get("foraDoFutebol", []) if x.get("url") in urls_validas]
-    return relatorio
+def _ancora(obj, urls):
+    """Normaliza um item com concorrentes/uol: filtra urls inválidas; uolDeu só com uolUrl real."""
+    chave = "concorrentes" if "concorrentes" in obj else "concorrencia"
+    obj[chave] = [c for c in obj.get(chave, []) if c.get("url") in urls]
+    if not (obj.get("uolDeu") and obj.get("uolUrl") in urls):
+        obj["uolDeu"] = False
+        obj["uolUrl"] = ""
+    return obj
 
 
-def datas_alvo(hoje_flag):
-    """Decide quais dias ler. Hoje (parcial) se --hoje; senão, na segunda lê sex+sáb+dom, nos demais lê ontem."""
+def balanco_do_dia(itens_dia):
+    rel = chamar_claude(dossie(itens_dia), SISTEMA_BALANCO)
+    urls = {i["url"] for i in itens_dia if i.get("url")}
+    assuntos = [_ancora(a, urls) for a in rel.get("assuntos", [])]
+    assuntos = [a for a in assuntos if a["concorrentes"] or a["uolDeu"]]
+    return {"assuntos": assuntos, "placar": rel.get("placar", "")}
+
+
+def correr_atras(itens_dia):
+    rel = chamar_claude(dossie(itens_dia), SISTEMA_CORRER)
+    urls = {i["url"] for i in itens_dia if i.get("url")}
+    clubes = {c.get("clube"): _ancora(c, urls) for c in rel.get("clubes", [])}
+    ordenados = [clubes.get(nome, {"clube": nome, "prioridade": "baixa", "novidade": False,
+                 "titulo": nome, "resumo": "Sem leitura nesta rodada.", "concorrencia": [], "uolDeu": False, "apurar": []})
+                 for nome in GRANDES]
+    outros = [_ancora(o, urls) for o in rel.get("outros", [])]
+    outros = [o for o in outros if o["concorrencia"] or o["uolDeu"]]
+    return {"clubes": ordenados, "outros": outros}
+
+
+def datas_alvo():
+    """Dias do balanço: na segunda lê sexta, sábado e domingo; nos demais dias úteis, ontem."""
     hoje = agora().astimezone(BRT).date()
-    if hoje_flag:
-        return [hoje.isoformat()]
-    if hoje.weekday() == 0:                      # segunda-feira: sexta, sábado, domingo
+    if hoje.weekday() == 0:
         return [(hoje - timedelta(days=d)).isoformat() for d in (3, 2, 1)]
     return [(hoje - timedelta(days=1)).isoformat()]
 
 
 def main():
     teste = "--teste" in sys.argv
-    hoje_flag = "--hoje" in sys.argv
+    so_hoje = "--so-hoje" in sys.argv
     override = next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--datas=")), "")
-    alvos = override.split(",") if override else datas_alvo(hoje_flag)
+    hoje = agora().astimezone(BRT).date().isoformat()
+    dias_balanco = [] if so_hoje else (override.split(",") if override else datas_alvo())
+    alvos = sorted(set(dias_balanco) | {hoje})
     itens, falhas = coletar_largo(alvos)
+
     if teste:
-        for data in sorted(set(alvos)):
-            print(f"\n######## {data} ########")
-            print(dossie([i for i in itens if i["data"] == data]))
-        print(f"\n== {len(itens)} itens em {len(set(alvos))} dia(s) | falhas: {len(falhas)} ==")
-        for f in falhas[:8]:
-            print("  -", f)
+        for d in alvos:
+            print(f"\n######## {d} ########")
+            print(dossie([i for i in itens if i["data"] == d]))
+        print(f"\n== {len(itens)} itens | balanço {dias_balanco} | hoje {hoje} | falhas {len(falhas)} ==")
         return
 
-    dias_saida, rota = [], []
-    for data in sorted(set(alvos)):
-        itens_dia = [i for i in itens if i["data"] == data]
-        if not itens_dia:
-            continue
-        rel = grounded(chamar_claude(dossie(itens_dia)), {i["url"] for i in itens_dia if i.get("url")})
-        dias_saida.append({"data": data, "cards": rel.get("cards", []), "foraDoFutebol": rel.get("foraDoFutebol", []),
-                           "totalItens": len(itens_dia)})
-        rota = rel.get("rotaDaSemana", []) or rota     # fica com a rota do dia mais recente que tiver
+    balanco = []
+    for d in dias_balanco:
+        itens_d = [i for i in itens if i["data"] == d]
+        if itens_d:
+            b = balanco_do_dia(itens_d)
+            balanco.append({"data": d, **b})
+    itens_hoje = [i for i in itens if i["data"] == hoje]
+    parte2 = correr_atras(itens_hoje) if itens_hoje else {"clubes": [], "outros": []}
+
     relatorio = {
         "geradoEm": agora().astimezone(BRT).isoformat(timespec="minutes"),
-        "parcial": hoje_flag,
-        "dias": dias_saida,
-        "rotaDaSemana": rota,
+        "balanco": balanco,
+        "correrAtras": {"data": hoje, "parcial": True, **parte2},
         "totalItens": len(itens),
-        "fontesForaDoAlcance": ["CazéTV (canal de YouTube, sem portal de texto)", "blogs independentes (não enumeráveis)"],
+        "fontesForaDoAlcance": ["redes sociais (não monitoradas)", "CazéTV e blogs independentes"],
     }
-    json.dump(cifrar(json.dumps(relatorio, ensure_ascii=False)), open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "editorial.json"), "w", encoding="utf-8"))
-    print(f"editorial.json gravado | dias {','.join(d['data'] for d in dias_saida)}{' parcial' if hoje_flag else ''} | {len(itens)} itens | modelo {MODELO}/{ESFORCO} | falhas {len(falhas)}")
+    raiz = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    json.dump(cifrar(json.dumps(relatorio, ensure_ascii=False)), open(os.path.join(raiz, "editorial.json"), "w", encoding="utf-8"))
+    print(f"editorial.json gravado | balanço {[b['data'] for b in balanco]} | hoje {hoje} | {len(itens)} itens | {MODELO}/{ESFORCO} | falhas {len(falhas)}")
 
 
 if __name__ == "__main__":
