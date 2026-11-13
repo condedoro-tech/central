@@ -51,7 +51,7 @@ jobs:
           if [ -n "${{ inputs.datas }}" ]; then
             python editor.py --datas=${{ inputs.datas }}
           elif [ -n "${{ inputs.teste }}" ]; then
-            python editor.py --teste
+            if [ "${{ inputs.janela }}" = "hoje" ]; then python editor.py --teste --hoje; else python editor.py --teste; fi
           elif [ "${{ inputs.janela }}" = "hoje" ]; then
             python editor.py --hoje
           else
