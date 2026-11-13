@@ -21,6 +21,14 @@ nav a.botao{color:#fff;background:var(--au);border-color:var(--au);font-weight:6
 @media (prefers-color-scheme:dark){nav a.botao{color:#10151e}}
 h2.parte{font-size:1.3rem;margin:26px 0 2px;border-bottom:2px solid var(--au);padding-bottom:6px}
 .psub{color:var(--mt);font-size:.85rem;margin:4px 0 14px}
+.abre{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:16px 0 24px}
+@media(max-width:640px){.abre{grid-template-columns:1fr}}
+.col3{background:var(--cd);border:1px solid var(--ln);border-radius:12px;padding:12px 14px;border-top:3px solid var(--ln)}
+.col3.u{border-top-color:var(--al)}.col3.o{border-top-color:var(--au)}.col3.b{border-top-color:var(--ok)}
+.col3 .h{font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;font-weight:700;margin-bottom:8px}
+.col3.u .h{color:var(--al)}.col3.o .h{color:var(--au)}.col3.b .h{color:var(--ok)}
+.col3 ul{margin:0;padding-left:16px}.col3 li{font-size:.88rem;margin-bottom:5px}
+.col3 .vazio{color:var(--mt);font-size:.85rem;font-style:italic}
 .diahead{font-size:.95rem;font-weight:700;color:var(--au);text-transform:uppercase;letter-spacing:.04em;margin:20px 0 8px}
 .placar{background:var(--cd);border:1px solid var(--au);border-left:4px solid var(--au);border-radius:8px;padding:10px 14px;font-size:.92rem;margin-bottom:12px}
 .card{background:var(--cd);border:1px solid var(--ln);border-radius:12px;padding:14px 16px;margin:10px 0}
@@ -118,6 +126,19 @@ function montar(ed,te){
     document.getElementById("resumo").textContent=(ed.totalItens||0)+" matérias lidas ·";
     var ca=ed.correrAtras||{};
     document.getElementById("selo").textContent="Correr atrás · "+dataBR(ca.data)+(ca.parcial?" (até agora)":"")+" · Balanço de "+(ed.balanco&&ed.balanco.length?dataBR(ed.balanco[0].data):"—");
+
+    // Card de abre — placar rápido (só o assunto)
+    var _urg=[],_olh=[],_bem=[];
+    (ca.clubes||[]).concat(ca.outros||[]).forEach(function(x){
+      var it={n:(x.clube||x.tema||""),t:(x.titulo||x.clube||x.tema||"")};
+      if(x.prioridade==="alta")_urg.push(it);else if(x.prioridade==="media")_olh.push(it);
+    });
+    (ed.balanco||[]).forEach(function(b){(b.assuntos||[]).forEach(function(a){if(/lider/i.test(a.veredito||""))_bem.push({n:"",t:a.titulo})})});
+    function _col(cls,tit,arr,lab){
+      var inner=arr.length?'<ul>'+arr.slice(0,5).map(function(x){return '<li>'+(lab&&x.n?'<b>'+esc(x.n)+'</b> — ':'')+esc(x.t)+'</li>'}).join("")+'</ul>':'<div class="vazio">nada aqui agora</div>';
+      return '<div class="col3 '+cls+'"><div class="h">'+esc(tit)+'</div>'+inner+'</div>';
+    }
+    h+='<div class="abre">'+_col("u","Ir atrás — urgente",_urg,true)+_col("o","Importante olhar agora",_olh,true)+_col("b","Fomos bem",_bem,false)+'</div>';
 
     // PARTE 2 — Correr atrás hoje (no topo, é o acionável)
     secoes.push(["correr","Correr atrás hoje"]);
