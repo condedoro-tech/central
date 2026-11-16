@@ -21,6 +21,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.parse
 from datetime import date, timedelta
 from email.utils import parsedate_to_datetime
@@ -157,20 +158,29 @@ Responda APENAS JSON válido:
  "outros":[{"tema":"","prioridade":"","titulo":"","resumo":"","concorrencia":[{"veiculo":"","url":"","oque":""}],"uolDeu":false,"uolUrl":"","apurar":[""]}]}"""
 
 
-def chamar_claude(texto, sistema):
+def chamar_claude(texto, sistema, tentativas=4):
+    """Chama o Claude; em sobrecarga/erro passageiro, espera e tenta de novo (até `tentativas`)."""
     from anthropic import Anthropic
     cliente = Anthropic()
     extra = {"betas": ["server-side-fallback-2026-07-01"], "fallbacks": "default"} if MODELO in FALLBACK_OK else {}
-    with cliente.beta.messages.stream(
-        model=MODELO, max_tokens=32000, thinking={"type": "adaptive"},
-        output_config={"effort": ESFORCO}, system=sistema,
-        messages=[{"role": "user", "content": f"Dossiê:\n\n{texto}\n\nResponda no formato JSON pedido."}],
-        **extra,
-    ) as fluxo:
-        msg = fluxo.get_final_message()
-    bruto = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
-    i, f = bruto.find("{"), bruto.rfind("}")
-    return json.loads(bruto[i:f + 1])
+    erro = None
+    for t in range(tentativas):
+        try:
+            with cliente.beta.messages.stream(
+                model=MODELO, max_tokens=32000, thinking={"type": "adaptive"},
+                output_config={"effort": ESFORCO}, system=sistema,
+                messages=[{"role": "user", "content": f"Dossiê:\n\n{texto}\n\nResponda no formato JSON pedido."}],
+                **extra,
+            ) as fluxo:
+                msg = fluxo.get_final_message()
+            bruto = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
+            i, f = bruto.find("{"), bruto.rfind("}")
+            return json.loads(bruto[i:f + 1])
+        except Exception as e:
+            erro = e
+            if t < tentativas - 1:
+                time.sleep(20 * (t + 1))      # 20s, 40s, 60s
+    raise erro
 
 
 def _ancora(obj, urls):
@@ -227,14 +237,28 @@ def main():
         print(f"\n== {len(itens)} itens | balanço {dias_balanco} | hoje {hoje} | falhas {len(falhas)} ==")
         return
 
+    # cada dia é independente: se um falhar (mesmo após os retries), segue com os outros
     balanco = []
     for d in dias_balanco:
         itens_d = [i for i in itens if i["data"] == d]
-        if itens_d:
-            b = balanco_do_dia(itens_d)
-            balanco.append({"data": d, **b})
+        if not itens_d:
+            continue
+        try:
+            balanco.append({"data": d, **balanco_do_dia(itens_d)})
+        except Exception as e:
+            falhas.append(f"balanço {d}: {str(e)[:80]}")
     itens_hoje = [i for i in itens if i["data"] == hoje]
-    parte2 = correr_atras(itens_hoje) if itens_hoje else {"clubes": [], "outros": []}
+    parte2 = {"clubes": [], "outros": []}
+    if itens_hoje:
+        try:
+            parte2 = correr_atras(itens_hoje)
+        except Exception as e:
+            falhas.append(f"correr atrás: {str(e)[:80]}")
+
+    # não sobrescrever um radar bom com vazio: se nada saiu, mantém o anterior e falha
+    if not balanco and not parte2.get("clubes"):
+        print("Nada gerado (API falhou em tudo). Mantendo o editorial.json anterior. Falhas:", falhas[:4])
+        sys.exit(1)
 
     relatorio = {
         "geradoEm": agora().astimezone(BRT).isoformat(timespec="minutes"),
