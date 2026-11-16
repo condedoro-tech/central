@@ -19,6 +19,7 @@ nav a{font-size:.82rem;color:var(--mt);text-decoration:none;border:1px solid var
 nav a:hover{color:var(--tx);border-color:var(--mt)}
 nav a.botao{color:#fff;background:var(--au);border-color:var(--au);font-weight:600}
 @media (prefers-color-scheme:dark){nav a.botao{color:#10151e}}
+nav a.copiar{background:var(--ac);border-color:var(--ac);color:var(--bg);font-weight:600}
 h2.parte{font-size:1.3rem;margin:26px 0 2px;border-bottom:2px solid var(--au);padding-bottom:6px}
 .psub{color:var(--mt);font-size:.85rem;margin:4px 0 14px}
 .abre{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:16px 0 24px}
@@ -79,6 +80,39 @@ function abrir(nome){
 Promise.all([abrir("editorial.json"),abrir("tendencias.json")]).then(function(r){montar(r[0],r[1])})
   .catch(function(e){document.getElementById("corpo").innerHTML='<div class="aviso">Não consegui abrir os dados: '+esc(e.message)+'</div>'});
 
+function rondaTexto(ed){
+  var L=["Abaixo está a ronda de hoje do meu radar (comparo a cobertura do UOL com a concorrência no esporte). Me ajude a achar insights, ângulos e pautas que estão escapando, e onde o UOL está vulnerável.",""];
+  var ca=ed.correrAtras||{};
+  L.push("RADAR UOL ESPORTE — gerado "+quandoBR(ed.geradoEm)+" · "+(ed.totalItens||0)+" matérias lidas");
+  L.push("");
+  L.push("== CORRER ATRÁS HOJE ("+dataBR(ca.data)+(ca.parcial?", parcial":"")+") ==");
+  (ca.clubes||[]).concat(ca.outros||[]).forEach(function(x){
+    L.push("["+(x.prioridade||"")+"] "+(x.clube||x.tema||"")+": "+(x.titulo||""));
+    if(x.resumo)L.push("  "+x.resumo);
+    (x.concorrencia||[]).forEach(function(c){L.push("  concorrência "+c.veiculo+": "+(c.oque||"")+" "+(c.url||""))});
+    L.push("  UOL: "+(x.uolDeu?("deu — "+x.uolUrl):"não localizado (conferir)"));
+    (x.apurar||[]).forEach(function(a){L.push("  apurar: "+a)});
+    L.push("");
+  });
+  (ed.balanco||[]).forEach(function(b){
+    L.push("== BALANÇO "+diaSemana(b.data)+" "+dataBR(b.data)+" ==");
+    if(b.placar)L.push("Placar: "+b.placar);
+    (b.assuntos||[]).forEach(function(a){
+      L.push("["+(a.veredito||"")+"] "+(a.titulo||""));
+      if(a.resumo)L.push("  "+a.resumo);
+      L.push("  UOL: "+(a.uolDeu?("deu — "+a.uolUrl):"não localizado (conferir)"));
+      (a.concorrentes||[]).forEach(function(c){L.push("  concorrência "+c.veiculo+": "+(c.url||""))});
+      if(a.comentario)L.push("  nota: "+a.comentario);
+    });
+    L.push("");
+  });
+  return L.join("\n");
+}
+function copiar(txt,botao){
+  function ok(){var t=botao.textContent;botao.textContent="Copiado! cole num chat";setTimeout(function(){botao.textContent=t},2500)}
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(ok).catch(function(){manual()})}else{manual()}
+  function manual(){var a=document.createElement("textarea");a.value=txt;document.body.appendChild(a);a.select();try{document.execCommand("copy");ok()}catch(e){}document.body.removeChild(a)}
+}
 function dataBR(iso){if(!iso)return"";var p=String(iso).slice(0,10).split("-");return p.length===3?p[2]+"/"+p[1]:iso}
 function diaSemana(iso){var dt=new Date(iso+"T12:00:00-03:00");if(isNaN(dt))return"";var s=dt.toLocaleDateString("pt-BR",{weekday:"long",timeZone:"America/Sao_Paulo"});return s.charAt(0).toUpperCase()+s.slice(1)}
 function quandoBR(iso){if(!iso)return"";var dt=new Date(iso);if(isNaN(dt))return iso;return dt.toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",timeZone:"America/Sao_Paulo"})}
@@ -181,8 +215,11 @@ function montar(ed,te){
     h+='<p class="nota">Fora do alcance: '+ed.fontesForaDoAlcance.map(esc).join("; ")+'.</p>';
 
   nav.innerHTML=secoes.map(function(p){return '<a href="#'+p[0]+'">'+esc(p[1])+'</a>'}).join("")
-    +'<a class="botao" href="https://github.com/condedoro-tech/central/actions/workflows/editorial.yml" target="_blank" rel="noopener" title="Abre o GitHub; em Run workflow rode para atualizar">Rodar agora ↗</a>';
+    +'<a class="botao" href="https://github.com/condedoro-tech/central/actions/workflows/editorial.yml" target="_blank" rel="noopener" title="Abre o GitHub; em Run workflow rode para atualizar">Rodar agora ↗</a>'
+    +(ed?'<a class="botao copiar" href="#" title="Copia a ronda em texto para você colar num chat do Claude">Copiar ronda</a>':'');
   corpo.innerHTML=h;
+  var bc=nav.querySelector(".copiar");
+  if(bc&&ed)bc.addEventListener("click",function(ev){ev.preventDefault();copiar(rondaTexto(ed),bc)});
 }
 document.getElementById("sair").addEventListener("click",function(){
   try{localStorage.removeItem("central-chave");sessionStorage.removeItem(KS)}catch(e){}location.reload();
