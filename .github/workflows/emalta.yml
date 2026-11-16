@@ -1,0 +1,22 @@
+# Temporário (Fase 3/4 do 'Em alta hoje'): roda o emalta.py em modo sombra e escreve o resumo no Actions.
+name: Em alta (sombra)
+on:
+  workflow_dispatch:
+jobs:
+  emalta:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Instala a cifra e o SDK
+        run: pip install --quiet anthropic cryptography
+      - name: Em alta hoje (sombra)
+        env:
+          CENTRAL_SENHA: ${{ secrets.CENTRAL_SENHA }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          EM_ALTA_SOMBRA: "1"
+        working-directory: ferramentas
+        run: python emalta.py | tee -a "$GITHUB_STEP_SUMMARY"
