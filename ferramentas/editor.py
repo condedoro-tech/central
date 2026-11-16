@@ -152,7 +152,14 @@ SISTEMA_CORRER = COMUM + """
 Tarefa: montar a lista de prioridades do que o UOL precisa CORRER ATRÁS hoje, a partir do que a concorrência publicou até agora.
 - SEMPRE um card para cada um dos 5, nesta ordem: Corinthians, Flamengo, Palmeiras, São Paulo, Santos. Sem novidade relevante: prioridade "baixa", novidade=false, resumo "sem novidade da concorrência; UOL em dia".
 - Depois, "outros": assuntos importantes (seleção, mercado, tribunal, outro clube).
-- prioridade "alta"/"media"/"baixa" conforme importância. Quanto mais importante, mais detalhe: em "alta" preencha concorrencia (o que o rival deu, com url) e apurar (o que o UOL deve correr atrás); em "baixa", só resumo curto.
+- prioridade "alta"/"media"/"baixa" conforme importância. Quanto mais importante, mais detalhe: em "alta" preencha concorrencia (o que o rival deu, com url) e apurar; em "baixa", só resumo curto.
+
+Régua de qualidade do "apurar" (sugestão ruim é pior que nenhuma):
+- NÃO sugira o óbvio que a redação já faria sozinha: "repercutir", "ouvir o outro lado", "acompanhar os próximos capítulos", "confirmar com o clube". Isso não é desdobramento.
+- Cada item de "apurar" é um desdobramento CONCRETO, com um ângulo real por trás.
+- Para cada card de prioridade alta, varra os ângulos abaixo e traga em "apurar" só os que renderem de verdade (não force os que não renderem):
+  Dinheiro (mexe em quanto, em qual caixa, em que contrato ou cláusula?); Mercado (quem lucra ou perde, que clube ou empresário se mexe?); Número (há um dado solto que vira pauta própria?); Tribunal/Regra (que decisão, STJD, CBF, regulamento ou cláusula está por trás?); História (já aconteceu antes? como foi?); Gente (quem vive isso: jogador, torcida, dirigente, personagem?); Impacto no clube (muda escalação, título, reta final, próximo jogo?); Risco (abre brecha pra crise, punição ou polêmica?).
+- Notícia forte costuma acionar 3 a 5 ângulos. Se você só achou um desdobramento numa história grande, releia e amplie.
 Responda APENAS JSON válido:
 {"clubes":[{"clube":"","prioridade":"","novidade":true,"titulo":"","resumo":"","concorrencia":[{"veiculo":"","url":"","oque":""}],"uolDeu":false,"uolUrl":"","apurar":[""]}],
  "outros":[{"tema":"","prioridade":"","titulo":"","resumo":"","concorrencia":[{"veiculo":"","url":"","oque":""}],"uolDeu":false,"uolUrl":"","apurar":[""]}]}"""
