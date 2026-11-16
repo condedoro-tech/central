@@ -59,6 +59,16 @@ jobs:
             python editor.py
           fi
 
+      - name: Em alta hoje (modo sombra — não publica na página)
+        if: ${{ !inputs.teste }}
+        continue-on-error: true
+        working-directory: ferramentas
+        env:
+          CENTRAL_SENHA: ${{ secrets.CENTRAL_SENHA }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          EM_ALTA_SOMBRA: "1"
+        run: python emalta.py | tee -a "$GITHUB_STEP_SUMMARY"
+
       - name: Publica o arquivo cifrado
         if: ${{ !inputs.teste }}
         run: |
