@@ -164,10 +164,18 @@ Régua de qualidade do "apurar" (sugestão ruim é pior que nenhuma):
 Para cada card de prioridade alta ou média, preencha também:
 - "porque": uma linha objetiva de por que isso é pauta hoje (o fato novo que justifica), sem opinião.
 - "titulos": 2 ou 3 títulos jornalísticos prontos para uso, de até 75 caracteres cada, sem opinião e sem clickbait, destacando o fato principal; se houver uma aspa forte na concorrência, use-a em um deles.
-Em prioridade baixa, deixe "porque":"" e "titulos":[].
+Em prioridade baixa, deixe "porque":"" , "titulos":[] e "formatos":[].
+
+Para cada card alta ou média, sugira em "formatos" de 1 a 3 oportunidades ALÉM da matéria em texto, só as que renderem de verdade (não force). Nomeie o formato, o padrão (quando vídeo ou flash) e o destino real do UOL Esporte:
+- Flash/carrossel quando houver lista, ranking, comparação, número forte, linha do tempo ou regra nova (padrões: "carrossel de regra nova", "carrossel que abre pela cena", "dado colado no objeto").
+- Vídeo autoral quando houver história, disputa, bastidor ou algo que o leitor não entende de imediato (padrões: "bastidor do fracasso", "personagem improvável de um trabalho comum", "o take emocional de um evento", "checagem de mito com pergunta binária", "arquivo pronto para a data inevitável").
+- Coluna: nomeie o colunista certo — Juca Kfouri, PVC, Mauro Cezar, Casagrande, Milly Lacombe, Rodrigo Mattos, Danilo Lavieri; César Merlo (Mercado da Bola); Andrei Kampf (Lei em Campo, justiça desportiva); Julianne Cerasoli (F1); Alexandre Cossenza (tênis).
+- Programa: Posse de Bola, De Primeira, Cartão Vermelho, Fim de Papo, Finanças do Esporte, UOL News Esporte, Live de Clubes.
+- Perfil de rede: UOL Esporte (futebol), Tênis, Fórmula 1.
+Cada item de "formatos" é uma frase pronta. Ex.: "Coluna do Andrei Kampf (Lei em Campo): o rito do STJD e se cabe recurso ao Pleno" ou "Vídeo bastidor do fracasso: a crise do Corinthians pelos bastidores, perfil UOL Esporte".
 Responda APENAS JSON válido:
-{"clubes":[{"clube":"","prioridade":"","novidade":true,"titulo":"","resumo":"","porque":"","concorrencia":[{"veiculo":"","url":"","oque":""}],"uolDeu":false,"uolUrl":"","apurar":[""],"titulos":[""]}],
- "outros":[{"tema":"","prioridade":"","titulo":"","resumo":"","porque":"","concorrencia":[{"veiculo":"","url":"","oque":""}],"uolDeu":false,"uolUrl":"","apurar":[""],"titulos":[""]}]}"""
+{"clubes":[{"clube":"","prioridade":"","novidade":true,"titulo":"","resumo":"","porque":"","concorrencia":[{"veiculo":"","url":"","oque":""}],"uolDeu":false,"uolUrl":"","apurar":[""],"titulos":[""],"formatos":[""]}],
+ "outros":[{"tema":"","prioridade":"","titulo":"","resumo":"","porque":"","concorrencia":[{"veiculo":"","url":"","oque":""}],"uolDeu":false,"uolUrl":"","apurar":[""],"titulos":[""],"formatos":[""]}]}"""
 
 
 def chamar_claude(texto, sistema, tentativas=4):

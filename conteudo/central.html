@@ -46,6 +46,7 @@ h2.parte{font-size:1.3rem;margin:26px 0 2px;border-bottom:2px solid var(--au);pa
 .apurar{margin:6px 0 0;padding-left:18px}.apurar li{font-size:.9rem;margin-bottom:3px}
 .porque{font-size:.9rem;margin:0 0 8px}.porque b{color:var(--au)}
 .titulos{margin:4px 0 10px;padding-left:18px}.titulos li{font-size:.92rem;margin-bottom:4px;font-weight:600}
+.formatos{margin:4px 0 0;padding-left:18px}.formatos li{font-size:.9rem;margin-bottom:4px;color:var(--az)}
 .coment{font-size:.88rem;color:var(--mt);font-style:italic;margin-top:6px}
 .th{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--mt);border-bottom:1px solid var(--ln);padding-bottom:6px;margin:22px 0 10px}
 .live{display:flex;gap:8px;flex-wrap:wrap}.live .t{background:var(--cd);border:1px solid var(--ln);border-radius:20px;padding:4px 11px;font-size:.82rem}.live .t .v{color:var(--dt)}
@@ -95,6 +96,7 @@ function rondaTexto(ed){
     (x.concorrencia||[]).forEach(function(c){L.push("  concorrência "+c.veiculo+": "+(c.oque||"")+" "+(c.url||""))});
     L.push("  UOL: "+(x.uolDeu?("deu — "+x.uolUrl):"não localizado (conferir)"));
     (x.apurar||[]).forEach(function(a){L.push("  apurar: "+a)});
+    (x.formatos||[]).forEach(function(fm){L.push("  rende também: "+fm)});
     (x.titulos||[]).forEach(function(t){L.push("  título sugerido: "+t)});
     L.push("");
   });
@@ -145,6 +147,7 @@ function cardCorrer(x,nome){
     h+=concorrenciaLinhas(x.concorrencia);
     h+=uolLinha(x.uolDeu,x.uolUrl);
     if(x.apurar&&x.apurar.length)h+='<div class="rot">Correr atrás</div><ul class="apurar">'+x.apurar.map(function(a){return '<li>'+esc(a)+'</li>'}).join("")+'</ul>';
+    if(x.formatos&&x.formatos.length)h+='<div class="rot">Rende também</div><ul class="formatos">'+x.formatos.map(function(fm){return '<li>'+esc(fm)+'</li>'}).join("")+'</ul>';
     if(x.titulos&&x.titulos.length)h+='<div class="rot">Títulos sugeridos</div><ul class="titulos">'+x.titulos.map(function(t){return '<li>'+esc(t)+'</li>'}).join("")+'</ul>';
   }
   return h+'</div>';
