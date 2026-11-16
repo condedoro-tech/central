@@ -1,0 +1,15 @@
+# Sondagem temporária (Fase 2 do 'Em alta hoje'): testa GDELT e Google Notícias no runner. Só imprime, não grava.
+name: Sonda fontes
+on:
+  workflow_dispatch:
+jobs:
+  sonda:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Sondar GDELT e Google Notícias
+        run: python ferramentas/sonda.py | tee "$GITHUB_STEP_SUMMARY"
