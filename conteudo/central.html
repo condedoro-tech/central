@@ -225,7 +225,8 @@ function montar(ed,te){
 
   nav.innerHTML=secoes.map(function(p){return '<a href="#'+p[0]+'">'+esc(p[1])+'</a>'}).join("")
     +'<a class="botao" href="https://github.com/condedoro-tech/central/actions/workflows/editorial.yml" target="_blank" rel="noopener" title="Abre o GitHub; em Run workflow rode para atualizar">Rodar agora ↗</a>'
-    +(ed?'<a class="botao copiar" href="#" title="Copia a ronda em texto para você colar num chat do Claude">Copiar ronda</a>':'');
+    +(ed?'<a class="botao copiar" href="#" title="Copia a ronda em texto para você colar num chat do Claude">Copiar ronda</a>':'')
+    +'<a class="botao" href="aprofundar.html" target="_blank" rel="noopener" title="Abre a ferramenta de aprofundar uma pauta">Aprofundar pauta ↗</a>';
   corpo.innerHTML=h;
   var bc=nav.querySelector(".copiar");
   if(bc&&ed)bc.addEventListener("click",function(ev){ev.preventDefault();copiar(rondaTexto(ed),bc)});

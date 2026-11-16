@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="pt-br"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>Aprofundar pauta — Radar UOL Esporte</title>
+<style>
+:root{--bg:#f2f1ee;--cd:#fff;--tx:#14171f;--mt:#5d6675;--ln:#e3e1dc;--ac:#1a2233;--au:#b4820a;--on:#fff}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1115;--cd:#171a21;--tx:#eef0f3;--mt:#9aa1ad;--ln:#2a2f39;--ac:#eef0f3;--au:#e0a92b;--on:#10151e}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,sans-serif;padding:16px}
+.capa{max-width:720px;margin:0 auto}
+header{border-bottom:2px solid var(--ac);padding-bottom:10px;margin-bottom:16px}
+.selo{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--au);font-weight:700}
+h1{font-size:1.5rem;margin:2px 0}
+a.volta{font-size:.85rem;color:var(--mt);text-decoration:none}a.volta:hover{color:var(--tx)}
+p.lead{color:var(--mt);font-size:.92rem}
+label{display:block;font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;color:var(--mt);margin:14px 0 5px;font-weight:600}
+input,textarea{width:100%;padding:11px 12px;font:15px/1.5 system-ui,sans-serif;border:1px solid var(--ln);border-radius:8px;background:var(--cd);color:var(--tx)}
+textarea{min-height:260px;resize:vertical}
+button{margin-top:16px;padding:12px 18px;font-size:16px;font-weight:600;border:0;border-radius:8px;background:var(--au);color:var(--on);cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+.dica{font-size:.82rem;color:var(--mt);margin-top:10px}
+.ok{color:#1b7f4b;font-weight:600}
+ol{color:var(--mt);font-size:.9rem;padding-left:20px}ol li{margin-bottom:4px}
+</style></head><body>
+<div class="capa">
+<header>
+  <div class="selo">Radar UOL Esporte · ferramenta</div>
+  <h1>Aprofundar uma pauta</h1>
+  <a class="volta" href="./">← voltar ao radar</a>
+</header>
+
+<p class="lead">Cole o <b>texto da matéria</b> (título + corpo). O botão monta o pedido pronto, no método do pauteiro, e copia. Aí você <b>cola num chat do Claude</b> e recebe o dossiê completo (quente, avançado, investigativa, outras), roteado pra equipe e formato.</p>
+<ol>
+  <li>Cole o texto da matéria abaixo.</li>
+  <li>Clique em "Copiar pedido".</li>
+  <li>Abra um chat do Claude e cole (Ctrl+V).</li>
+</ol>
+
+<label for="meta">Título e veículo (opcional)</label>
+<input id="meta" type="text" placeholder="ex.: São Paulo tem 3 dias para pagar dívida — ge, 16/11">
+
+<label for="txt">Texto da matéria</label>
+<textarea id="txt" placeholder="Cole aqui o título e o corpo da matéria. Quanto mais completo, melhores as pautas (o método garimpa o número e o termo enterrados no texto)."></textarea>
+
+<button id="b" type="submit">Copiar pedido para o chat</button>
+<p class="dica" id="aviso">Dica: cole a matéria inteira. Se vier só a manchete, o Claude vai pedir o corpo — é de propósito, pauta boa sai do texto, não do título.</p>
+
+<script>
+var METODO = [
+"Você é pauteiro-chefe de uma grande redação esportiva brasileira (UOL Esporte). Recebe o texto de uma matéria e responde a uma pergunta: isso rende mais alguma coisa? Quando rende, você sugere os desdobramentos com formato e destino. Quando não rende, diz que não rende.",
+"",
+"REGRAS:",
+"- Use SOMENTE o texto que eu colar. Não deduza a partir do título, do link ou do que você sabe do assunto. Se eu colar só a manchete ou um texto truncado, PARE e peça o corpo da matéria antes de sugerir.",
+"- Sugestão ruim é pior que nenhuma. Não sugira o óbvio que a redação já faria (repercutir, ouvir o outro lado, acompanhar os próximos capítulos). O alvo é o máximo de pautas BOAS, não o mínimo seguro.",
+"- Toda pauta esportiva, em qualquer formato, é da equipe de Esporte (ela faz o próprio conteúdo de redes).",
+"",
+"GARIMPE O TEXTO: o número enterrado no meio, o termo não explicado, a exceção citada de passagem — cada um pode virar pauta própria.",
+"",
+"VARRA OS 9 ÂNGULOS (traga só os que renderem): Bolso/Dinheiro (mexe em quanto, em que caixa, contrato ou cláusula?); Mercado (quem lucra ou perde, que clube ou empresário se mexe?); Número (dado que vira pauta própria?); Regra/Tribunal (que decisão, STJD, CBF, regulamento está por trás?); História (já aconteceu? como foi?); Gente (quem vive isso: jogador, torcida, dirigente, personagem?); Impacto (muda escalação, título, reta final?); Risco (abre brecha pra crise, punição, polêmica?); Brasil (se for de fora, como chega aqui?). Notícia grande aciona 5 a 7 ângulos; se acionou só dois, releia.",
+"",
+"OS 4 TIPOS: 1) Segundo momento quente (rápida, hoje, sem fonte). 2) Avançado (apuração: fontes, números, comparação). 3) Investigativa (fôlego: base pública, documento, LAI — não precisa do dado na notícia, precisa de base pra apurar). 4) Outras (programa, coluna, vídeo autoral, carrossel).",
+"",
+"FORMATO VISUAL (metade do público é rede): se há lista, ranking, comparação, número forte, linha do tempo, regra nova ou imagem → vira CARROSSEL (padrões: 'carrossel que abre pela cena', 'carrossel de regra nova', 'dado colado no objeto'). Se há história, disputa, bastidor ou algo difícil de entender → vira VÍDEO AUTORAL, um explicador de rosto com apoio (padrões: 'bastidor do fracasso', 'personagem improvável de um trabalho comum', 'o take emocional de um evento', 'checagem de mito com pergunta binária', 'arquivo pronto para a data inevitável'). Nomeie o padrão na sugestão. Numa notícia grande, espere 3 a 5 sugestões de flash/vídeo, não uma.",
+"",
+"DESTINOS REAIS DO UOL ESPORTE:",
+"- Colunistas: Juca Kfouri, PVC, Mauro Cezar Pereira, Casagrande, Milly Lacombe, Rodrigo Mattos, Danilo Lavieri; César Merlo (Mercado da Bola); Andrei Kampf (Lei em Campo, justiça desportiva); Julianne Cerasoli (F1); Alexandre Cossenza (tênis).",
+"- Programas: Posse de Bola, De Primeira, Cartão Vermelho, Fim de Papo, Finanças do Esporte, UOL News Esporte, Live de Clubes.",
+"- Perfis de rede: UOL Esporte (futebol), Tênis, Fórmula 1.",
+"",
+"QUANTIDADE: fato grande com várias camadas → 8 a 12; fato relevante com gancho claro → 6 a 9; fato médio ou em aberto → 4 a 6; autocontido ou saturado → zero (responda 'Sem sugestões' e explique em uma linha).",
+"",
+"FORMATO DA RESPOSTA:",
+"**[Resumo do tema em uma linha]**",
+"Editoria: Esporte · N sugestões",
+"### Segundo momento quente / ### Avançado / ### Investigativa / ### Outras",
+"Em cada item: **título tratável (até ~90 car.)** — *formato · destino (colunista/programa/perfil) · padrão, se vídeo/flash* — uma linha: o que entrega e de onde tirar.",
+"---",
+"**Notas:** por que essa quantidade; o que foi cortado e por quê; qual sugestão é mais frágil e do que depende.",
+"",
+"Antes de fechar: tenho o texto real? Cada ideia de vídeo é uma sugestão separada? Alguma é o óbvio que a equipe já faria? Quantas são visuais (flash/vídeo)? A quantidade bate com o tamanho do fato?",
+"",
+"=== TEXTO DA MATÉRIA ==="
+].join("\n");
+
+function copiar(txt,botao){
+  function ok(){botao.textContent="Copiado! cole num chat do Claude";botao.classList.add("ok");setTimeout(function(){botao.textContent="Copiar pedido para o chat";botao.classList.remove("ok")},3000)}
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(ok).catch(manual)}else{manual()}
+  function manual(){var a=document.createElement("textarea");a.value=txt;document.body.appendChild(a);a.select();try{document.execCommand("copy");ok()}catch(e){}document.body.removeChild(a)}
+}
+document.getElementById("b").addEventListener("click",function(ev){
+  ev.preventDefault();
+  var txt=document.getElementById("txt").value.trim();
+  var meta=document.getElementById("meta").value.trim();
+  if(txt.length<120){document.getElementById("aviso").textContent="Cole o corpo da matéria, não só o título — pelo menos uns parágrafos.";return}
+  var pedido=METODO+"\n"+(meta?("["+meta+"]\n"):"")+txt;
+  copiar(pedido,document.getElementById("b"));
+});
+</script>
+</div></body></html>
