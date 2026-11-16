@@ -189,7 +189,7 @@ function montar(ed,te){
     h+='<p class="psub">O que a concorrência publicou hoje e o UOL precisa perseguir. Um card por clube de prioridade, depois outros assuntos.</p>';
     (ca.clubes||[]).forEach(function(c){h+=cardCorrer(c,c.clube)});
     if(ca.outros&&ca.outros.length){h+='<div class="th">Outros assuntos</div>';ca.outros.forEach(function(o){h+=cardCorrer(o,o.tema)})}
-    if(!(ca.clubes||[]).length)h+='<div class="aviso">Ainda sem leitura de hoje. Use "Rodar agora".</div>';
+    if(!(ca.clubes||[]).length)h+='<div class="aviso">Ainda sem leitura de hoje.</div>';
     h+='</section>';
 
     // PARTE 1 — Balanço de ontem (UOL x concorrência)
@@ -205,7 +205,7 @@ function montar(ed,te){
     if(!(ed.balanco||[]).length)h+='<p class="resumo">Sem balanço nesta rodada.</p>';
     h+='</section>';
   }else{
-    h+='<section><div class="aviso">A leitura ainda não foi gerada. Veja o que está em alta agora, abaixo, ou use "Rodar agora".</div></section>';
+    h+='<section><div class="aviso">A leitura ainda não foi gerada. Veja o que está em alta agora, abaixo.</div></section>';
   }
 
   if(te&&te.trends){
@@ -224,7 +224,6 @@ function montar(ed,te){
     h+='<p class="nota">Fora do alcance: '+ed.fontesForaDoAlcance.map(esc).join("; ")+'.</p>';
 
   nav.innerHTML=secoes.map(function(p){return '<a href="#'+p[0]+'">'+esc(p[1])+'</a>'}).join("")
-    +'<a class="botao" href="https://github.com/condedoro-tech/central/actions/workflows/editorial.yml" target="_blank" rel="noopener" title="Abre o GitHub; em Run workflow rode para atualizar">Rodar agora ↗</a>'
     +(ed?'<a class="botao copiar" href="#" title="Copia a ronda em texto para você colar num chat do Claude">Copiar ronda</a>':'')
     +'<a class="botao" href="aprofundar.html" target="_blank" rel="noopener" title="Abre a ferramenta de aprofundar uma pauta">Aprofundar pauta ↗</a>';
   corpo.innerHTML=h;
