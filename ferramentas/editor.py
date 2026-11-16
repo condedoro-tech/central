@@ -160,9 +160,14 @@ Régua de qualidade do "apurar" (sugestão ruim é pior que nenhuma):
 - Para cada card de prioridade alta, varra os ângulos abaixo e traga em "apurar" só os que renderem de verdade (não force os que não renderem):
   Dinheiro (mexe em quanto, em qual caixa, em que contrato ou cláusula?); Mercado (quem lucra ou perde, que clube ou empresário se mexe?); Número (há um dado solto que vira pauta própria?); Tribunal/Regra (que decisão, STJD, CBF, regulamento ou cláusula está por trás?); História (já aconteceu antes? como foi?); Gente (quem vive isso: jogador, torcida, dirigente, personagem?); Impacto no clube (muda escalação, título, reta final, próximo jogo?); Risco (abre brecha pra crise, punição ou polêmica?).
 - Notícia forte costuma acionar 3 a 5 ângulos. Se você só achou um desdobramento numa história grande, releia e amplie.
+
+Para cada card de prioridade alta ou média, preencha também:
+- "porque": uma linha objetiva de por que isso é pauta hoje (o fato novo que justifica), sem opinião.
+- "titulos": 2 ou 3 títulos jornalísticos prontos para uso, de até 75 caracteres cada, sem opinião e sem clickbait, destacando o fato principal; se houver uma aspa forte na concorrência, use-a em um deles.
+Em prioridade baixa, deixe "porque":"" e "titulos":[].
 Responda APENAS JSON válido:
-{"clubes":[{"clube":"","prioridade":"","novidade":true,"titulo":"","resumo":"","concorrencia":[{"veiculo":"","url":"","oque":""}],"uolDeu":false,"uolUrl":"","apurar":[""]}],
- "outros":[{"tema":"","prioridade":"","titulo":"","resumo":"","concorrencia":[{"veiculo":"","url":"","oque":""}],"uolDeu":false,"uolUrl":"","apurar":[""]}]}"""
+{"clubes":[{"clube":"","prioridade":"","novidade":true,"titulo":"","resumo":"","porque":"","concorrencia":[{"veiculo":"","url":"","oque":""}],"uolDeu":false,"uolUrl":"","apurar":[""],"titulos":[""]}],
+ "outros":[{"tema":"","prioridade":"","titulo":"","resumo":"","porque":"","concorrencia":[{"veiculo":"","url":"","oque":""}],"uolDeu":false,"uolUrl":"","apurar":[""],"titulos":[""]}]}"""
 
 
 def chamar_claude(texto, sistema, tentativas=4):
