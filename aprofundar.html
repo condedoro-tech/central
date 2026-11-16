@@ -2,98 +2,39 @@
 <html lang="pt-br"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive">
-<title>Aprofundar pauta — Radar UOL Esporte</title>
+<title>Radar UOL Esporte</title>
 <style>
-:root{--bg:#f2f1ee;--cd:#fff;--tx:#14171f;--mt:#5d6675;--ln:#e3e1dc;--ac:#1a2233;--au:#b4820a;--on:#fff}
-@media (prefers-color-scheme:dark){:root{--bg:#0f1115;--cd:#171a21;--tx:#eef0f3;--mt:#9aa1ad;--ln:#2a2f39;--ac:#eef0f3;--au:#e0a92b;--on:#10151e}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,sans-serif;padding:16px}
-.capa{max-width:720px;margin:0 auto}
-header{border-bottom:2px solid var(--ac);padding-bottom:10px;margin-bottom:16px}
-.selo{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--au);font-weight:700}
-h1{font-size:1.5rem;margin:2px 0}
-a.volta{font-size:.85rem;color:var(--mt);text-decoration:none}a.volta:hover{color:var(--tx)}
-p.lead{color:var(--mt);font-size:.92rem}
-label{display:block;font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;color:var(--mt);margin:14px 0 5px;font-weight:600}
-input,textarea{width:100%;padding:11px 12px;font:15px/1.5 system-ui,sans-serif;border:1px solid var(--ln);border-radius:8px;background:var(--cd);color:var(--tx)}
-textarea{min-height:260px;resize:vertical}
-button{margin-top:16px;padding:12px 18px;font-size:16px;font-weight:600;border:0;border-radius:8px;background:var(--au);color:var(--on);cursor:pointer}
-button:disabled{opacity:.5;cursor:default}
-.dica{font-size:.82rem;color:var(--mt);margin-top:10px}
-.ok{color:#1b7f4b;font-weight:600}
-ol{color:var(--mt);font-size:.9rem;padding-left:20px}ol li{margin-bottom:4px}
+:root{--bg:#f5f5f3;--tx:#111c2e;--mt:#5d6675;--ln:#c9ccd2;--ac:#111c2e;--on:#fff}
+@media (prefers-color-scheme:dark){:root{--bg:#10151e;--tx:#eef0f3;--mt:#a0a7b3;--ln:#3a4250;--ac:#eef0f3;--on:#10151e}}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:16px;background:var(--bg);color:var(--tx);font:16px system-ui,sans-serif}
+form{width:100%;max-width:340px}h1{font-size:1.4rem;margin:0 0 18px}label{display:block;font-size:.9rem;margin-bottom:6px}
+input[type=password]{width:100%;padding:12px;font-size:16px;border:1px solid var(--ln);border-radius:8px;background:transparent;color:var(--tx)}
+.lembrar{display:flex;gap:8px;align-items:center;margin:12px 0;color:var(--mt)}
+button{width:100%;padding:12px;font-size:16px;border:0;border-radius:8px;background:var(--ac);color:var(--on);cursor:pointer}
+button:disabled{opacity:.6}#erro{min-height:1.3em;margin:10px 0 0;color:#c0392b;font-size:.9rem}
 </style></head><body>
-<div class="capa">
-<header>
-  <div class="selo">Radar UOL Esporte · ferramenta</div>
-  <h1>Aprofundar uma pauta</h1>
-  <a class="volta" href="./">← voltar ao radar</a>
-</header>
-
-<p class="lead">Cole o <b>texto da matéria</b> (título + corpo). O botão monta o pedido pronto, no método do pauteiro, e copia. Aí você <b>cola num chat do Claude</b> e recebe o dossiê completo (quente, avançado, investigativa, outras), roteado pra equipe e formato.</p>
-<ol>
-  <li>Cole o texto da matéria abaixo.</li>
-  <li>Clique em "Copiar pedido".</li>
-  <li>Abra um chat do Claude e cole (Ctrl+V).</li>
-</ol>
-
-<label for="meta">Título e veículo (opcional)</label>
-<input id="meta" type="text" placeholder="ex.: São Paulo tem 3 dias para pagar dívida — ge, 16/11">
-
-<label for="txt">Texto da matéria</label>
-<textarea id="txt" placeholder="Cole aqui o título e o corpo da matéria. Quanto mais completo, melhores as pautas (o método garimpa o número e o termo enterrados no texto)."></textarea>
-
-<button id="b" type="submit">Copiar pedido para o chat</button>
-<p class="dica" id="aviso">Dica: cole a matéria inteira. Se vier só a manchete, o Claude vai pedir o corpo — é de propósito, pauta boa sai do texto, não do título.</p>
-
+<form id="f"><h1>Radar UOL Esporte</h1>
+<label for="s">Senha</label><input id="s" type="password" autocomplete="current-password" required autofocus>
+<div class="lembrar"><input id="l" type="checkbox"><label for="l" style="margin:0">Lembrar neste aparelho</label></div>
+<button id="b" type="submit">Entrar</button><p id="erro" role="alert"></p></form>
 <script>
-var METODO = [
-"Você é pauteiro-chefe de uma grande redação esportiva brasileira (UOL Esporte). Recebe o texto de uma matéria e responde a uma pergunta: isso rende mais alguma coisa? Quando rende, você sugere os desdobramentos com formato e destino. Quando não rende, diz que não rende.",
-"",
-"REGRAS:",
-"- Use SOMENTE o texto que eu colar. Não deduza a partir do título, do link ou do que você sabe do assunto. Se eu colar só a manchete ou um texto truncado, PARE e peça o corpo da matéria antes de sugerir.",
-"- Sugestão ruim é pior que nenhuma. Não sugira o óbvio que a redação já faria (repercutir, ouvir o outro lado, acompanhar os próximos capítulos). O alvo é o máximo de pautas BOAS, não o mínimo seguro.",
-"- Toda pauta esportiva, em qualquer formato, é da equipe de Esporte (ela faz o próprio conteúdo de redes).",
-"",
-"GARIMPE O TEXTO: o número enterrado no meio, o termo não explicado, a exceção citada de passagem — cada um pode virar pauta própria.",
-"",
-"VARRA OS 9 ÂNGULOS (traga só os que renderem): Bolso/Dinheiro (mexe em quanto, em que caixa, contrato ou cláusula?); Mercado (quem lucra ou perde, que clube ou empresário se mexe?); Número (dado que vira pauta própria?); Regra/Tribunal (que decisão, STJD, CBF, regulamento está por trás?); História (já aconteceu? como foi?); Gente (quem vive isso: jogador, torcida, dirigente, personagem?); Impacto (muda escalação, título, reta final?); Risco (abre brecha pra crise, punição, polêmica?); Brasil (se for de fora, como chega aqui?). Notícia grande aciona 5 a 7 ângulos; se acionou só dois, releia.",
-"",
-"OS 4 TIPOS: 1) Segundo momento quente (rápida, hoje, sem fonte). 2) Avançado (apuração: fontes, números, comparação). 3) Investigativa (fôlego: base pública, documento, LAI — não precisa do dado na notícia, precisa de base pra apurar). 4) Outras (programa, coluna, vídeo autoral, carrossel).",
-"",
-"FORMATO VISUAL (metade do público é rede): se há lista, ranking, comparação, número forte, linha do tempo, regra nova ou imagem → vira CARROSSEL (padrões: 'carrossel que abre pela cena', 'carrossel de regra nova', 'dado colado no objeto'). Se há história, disputa, bastidor ou algo difícil de entender → vira VÍDEO AUTORAL, um explicador de rosto com apoio (padrões: 'bastidor do fracasso', 'personagem improvável de um trabalho comum', 'o take emocional de um evento', 'checagem de mito com pergunta binária', 'arquivo pronto para a data inevitável'). Nomeie o padrão na sugestão. Numa notícia grande, espere 3 a 5 sugestões de flash/vídeo, não uma.",
-"",
-"DESTINOS REAIS DO UOL ESPORTE:",
-"- Colunistas: Juca Kfouri, PVC, Mauro Cezar Pereira, Casagrande, Milly Lacombe, Rodrigo Mattos, Danilo Lavieri; César Merlo (Mercado da Bola); Andrei Kampf (Lei em Campo, justiça desportiva); Julianne Cerasoli (F1); Alexandre Cossenza (tênis).",
-"- Programas: Posse de Bola, De Primeira, Cartão Vermelho, Fim de Papo, Finanças do Esporte, UOL News Esporte, Live de Clubes.",
-"- Perfis de rede: UOL Esporte (futebol), Tênis, Fórmula 1.",
-"",
-"QUANTIDADE: fato grande com várias camadas → 8 a 12; fato relevante com gancho claro → 6 a 9; fato médio ou em aberto → 4 a 6; autocontido ou saturado → zero (responda 'Sem sugestões' e explique em uma linha).",
-"",
-"FORMATO DA RESPOSTA:",
-"**[Resumo do tema em uma linha]**",
-"Editoria: Esporte · N sugestões",
-"### Segundo momento quente / ### Avançado / ### Investigativa / ### Outras",
-"Em cada item: **título tratável (até ~90 car.)** — *formato · destino (colunista/programa/perfil) · padrão, se vídeo/flash* — uma linha: o que entrega e de onde tirar.",
-"---",
-"**Notas:** por que essa quantidade; o que foi cortado e por quê; qual sugestão é mais frágil e do que depende.",
-"",
-"Antes de fechar: tenho o texto real? Cada ideia de vídeo é uma sugestão separada? Alguma é o óbvio que a equipe já faria? Quantas são visuais (flash/vídeo)? A quantidade bate com o tamanho do fato?",
-"",
-"=== TEXTO DA MATÉRIA ==="
-].join("\n");
-
-function copiar(txt,botao){
-  function ok(){botao.textContent="Copiado! cole num chat do Claude";botao.classList.add("ok");setTimeout(function(){botao.textContent="Copiar pedido para o chat";botao.classList.remove("ok")},3000)}
-  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(ok).catch(manual)}else{manual()}
-  function manual(){var a=document.createElement("textarea");a.value=txt;document.body.appendChild(a);a.select();try{document.execCommand("copy");ok()}catch(e){}document.body.removeChild(a)}
-}
-document.getElementById("b").addEventListener("click",function(ev){
-  ev.preventDefault();
-  var txt=document.getElementById("txt").value.trim();
-  var meta=document.getElementById("meta").value.trim();
-  if(txt.length<120){document.getElementById("aviso").textContent="Cole o corpo da matéria, não só o título — pelo menos uns parágrafos.";return}
-  var pedido=METODO+"\n"+(meta?("["+meta+"]\n"):"")+txt;
-  copiar(pedido,document.getElementById("b"));
-});
-</script>
-</div></body></html>
+(function(){
+var SAL="vkGXJI2UGAL2Tv2fisIULA==",IV="pvA/Ir+GXYAvChLH",DADOS="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",IT=600000,K="central-chave",KS="central-chave-sessao";
+function bin(b){return Uint8Array.from(atob(b),function(c){return c.charCodeAt(0)})}
+function b64(u){var s="";new Uint8Array(u).forEach(function(c){s+=String.fromCharCode(c)});return btoa(s)}
+function abrir(chave){return crypto.subtle.decrypt({name:"AES-GCM",iv:bin(IV)},chave,bin(DADOS)).then(function(p){
+  var h=new TextDecoder().decode(p);document.open();document.write(h);document.close()})}
+function importar(raw){return crypto.subtle.importKey("raw",raw,"AES-GCM",false,["decrypt"])}
+function derivar(senha){var e=new TextEncoder();return crypto.subtle.importKey("raw",e.encode(senha),"PBKDF2",false,["deriveBits"]).then(function(m){
+  return crypto.subtle.deriveBits({name:"PBKDF2",salt:bin(SAL),iterations:IT,hash:"SHA-256"},m,256)})}
+var guardada=null;try{guardada=localStorage.getItem(K)}catch(e){}
+if(guardada){try{sessionStorage.setItem(KS,guardada)}catch(e){}importar(bin(guardada)).then(abrir).catch(function(){try{localStorage.removeItem(K)}catch(e){}})}
+document.getElementById("f").addEventListener("submit",function(ev){ev.preventDefault();
+  var b=document.getElementById("b"),erro=document.getElementById("erro");b.disabled=true;b.textContent="Abrindo...";erro.textContent="";
+  derivar(document.getElementById("s").value.trim()).then(function(raw){
+    var lembrar=document.getElementById("l").checked;
+    try{sessionStorage.setItem(KS,b64(raw))}catch(e){}
+    return importar(raw).then(abrir).then(function(){if(lembrar){try{localStorage.setItem(K,b64(raw))}catch(e){}}})
+  }).catch(function(){b.disabled=false;b.textContent="Entrar";erro.textContent="Senha incorreta."})});
+})();
+</script></body></html>

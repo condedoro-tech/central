@@ -148,6 +148,10 @@ Responda APENAS JSON válido:
 {"assuntos":[{"titulo":"","resumo":"","veredito":"","uolDeu":true,"uolUrl":"","concorrentes":[{"veiculo":"","url":""}],"comentario":"avaliação curta UOL x concorrência"}],
  "placar":"uma linha: onde o UOL ganhou e onde ficou atrás no dia"}"""
 
+# Destinos curados do UOL Esporte: vêm do segredo RONDA_DESTINOS (não ficam no código público).
+# Vazio (ex.: rodando local sem o segredo) = o modelo roteia pelo que já conhece do UOL Esporte.
+DESTINOS_ESPORTE = os.environ.get("RONDA_DESTINOS", "").strip()
+
 SISTEMA_CORRER = COMUM + """
 Tarefa: montar a lista de prioridades do que o UOL precisa CORRER ATRÁS hoje, a partir do que a concorrência publicou até agora.
 - SEMPRE um card para cada um dos 5, nesta ordem: Corinthians, Flamengo, Palmeiras, São Paulo, Santos. Sem novidade relevante: prioridade "baixa", novidade=false, resumo "sem novidade da concorrência; UOL em dia".
@@ -166,14 +170,8 @@ Para cada card de prioridade alta ou média, preencha também:
 - "titulos": 2 ou 3 títulos jornalísticos prontos para uso, de até 75 caracteres cada, sem opinião e sem clickbait, destacando o fato principal; se houver uma aspa forte na concorrência, use-a em um deles.
 Em prioridade baixa, deixe "porque":"" , "titulos":[] e "formatos":[].
 
-Para cada card alta ou média, sugira em "formatos" de 1 a 3 oportunidades ALÉM da matéria em texto, só as que renderem de verdade (não force). Nomeie o formato, o padrão (quando vídeo ou flash) e o destino real do UOL Esporte:
-- Flash/carrossel quando houver lista, ranking, comparação, número forte, linha do tempo ou regra nova (padrões: "carrossel de regra nova", "carrossel que abre pela cena", "dado colado no objeto").
-- Vídeo autoral quando houver história, disputa, bastidor ou algo que o leitor não entende de imediato (padrões: "bastidor do fracasso", "personagem improvável de um trabalho comum", "o take emocional de um evento", "checagem de mito com pergunta binária", "arquivo pronto para a data inevitável").
-- Coluna: nomeie o colunista certo — Juca Kfouri, PVC, Mauro Cezar, Casagrande, Milly Lacombe, Rodrigo Mattos, Danilo Lavieri; César Merlo (Mercado da Bola); Andrei Kampf (Lei em Campo, justiça desportiva); Julianne Cerasoli (F1); Alexandre Cossenza (tênis).
-- Programa: Posse de Bola, De Primeira, Cartão Vermelho, Fim de Papo, Finanças do Esporte, UOL News Esporte, Live de Clubes.
-- Perfil de rede: UOL Esporte (futebol), Tênis, Fórmula 1.
-Cada item de "formatos" é uma frase pronta. Ex.: "Coluna do Andrei Kampf (Lei em Campo): o rito do STJD e se cabe recurso ao Pleno" ou "Vídeo bastidor do fracasso: a crise do Corinthians pelos bastidores, perfil UOL Esporte".
-Responda APENAS JSON válido:
+Para cada card alta ou média, sugira em "formatos" de 1 a 3 oportunidades ALÉM da matéria em texto, só as que renderem de verdade (não force): flash/carrossel (quando há lista, ranking, comparação, número forte, linha do tempo ou regra nova); vídeo autoral (quando há história, disputa, bastidor ou algo difícil de entender, como um explicador de rosto com apoio); coluna (roteada ao colunista de esporte certo para o assunto); programa de esporte; perfil de rede. Cada item é uma frase pronta, com o destino e, quando vídeo ou flash, o padrão do formato.
+""" + (DESTINOS_ESPORTE + "\n" if DESTINOS_ESPORTE else "") + """Responda APENAS JSON válido:
 {"clubes":[{"clube":"","prioridade":"","novidade":true,"titulo":"","resumo":"","porque":"","concorrencia":[{"veiculo":"","url":"","oque":""}],"uolDeu":false,"uolUrl":"","apurar":[""],"titulos":[""],"formatos":[""]}],
  "outros":[{"tema":"","prioridade":"","titulo":"","resumo":"","porque":"","concorrencia":[{"veiculo":"","url":"","oque":""}],"uolDeu":false,"uolUrl":"","apurar":[""],"titulos":[""],"formatos":[""]}]}"""
 

@@ -47,6 +47,7 @@ jobs:
         env:
           CENTRAL_SENHA: ${{ secrets.CENTRAL_SENHA }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          RONDA_DESTINOS: ${{ secrets.RONDA_DESTINOS }}
         run: |
           if [ -n "${{ inputs.datas }}" ]; then
             python editor.py --datas=${{ inputs.datas }}
