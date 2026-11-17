@@ -31,7 +31,8 @@ var guardada=null,sessao=null;
 try{guardada=localStorage.getItem(K)}catch(e){}
 try{sessao=sessionStorage.getItem(KS)}catch(e){}
 // auto-abre só depois do parse: document.write em callback só substitui a página inteira pós-carga
-function autoAbrir(raw,limpar){importar(bin(raw)).then(abrir).catch(function(){try{limpar()}catch(e){}})}
+// garante a chave de sessão (as páginas internas — radar, em alta, aprofundar — leem dela)
+function autoAbrir(raw,limpar){try{sessionStorage.setItem(KS,raw)}catch(e){}importar(bin(raw)).then(abrir).catch(function(){try{limpar()}catch(e){}})}
 function iniciar(){
   if(guardada)autoAbrir(guardada,function(){localStorage.removeItem(K)});
   else if(sessao)autoAbrir(sessao,function(){sessionStorage.removeItem(KS)});
