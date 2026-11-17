@@ -288,8 +288,14 @@ def main():
     if sombra:
         print(f"\n[sombra] {len(assuntos)} assuntos calculados, nada publicado na página.")
         return
-    # Fase 5 (ativação): gravar na página — a implementar quando o Bruno aprovar.
-    print("[ativo] (gravação na página ainda não implementada; rode em sombra)")
+    # Fase 5 (ativo): grava emalta.json cifrado para a página renderizar o card.
+    relatorio = {
+        "geradoEm": agora().astimezone(BRT).isoformat(timespec="minutes"),
+        "assuntos": assuntos,
+        "fontesForaDoAlcance": sorted(set(fontes_fora)),
+    }
+    json.dump(cifrar(json.dumps(relatorio, ensure_ascii=False)), open(os.path.join(RAIZ, "emalta.json"), "w", encoding="utf-8"))
+    print(f"\n[ativo] emalta.json gravado | {len(assuntos)} assuntos")
 
 
 if __name__ == "__main__":

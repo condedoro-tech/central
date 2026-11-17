@@ -1,6 +1,7 @@
 # gerados: rode ferramentas/montar.py e os coletores
 tendencias.json
 editorial.json
+emalta.json
 __pycache__/
 # fonte do aprofundar (metodo em claro) — so a versao publicada (cifrada) vai pro repo
 conteudo/aprofundar.html

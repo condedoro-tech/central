@@ -80,7 +80,7 @@ function abrir(nome){
     }).then(function(buf){return JSON.parse(new TextDecoder().decode(buf))})
   }).catch(function(){return null})
 }
-Promise.all([abrir("editorial.json"),abrir("tendencias.json")]).then(function(r){montar(r[0],r[1])})
+Promise.all([abrir("editorial.json"),abrir("tendencias.json"),abrir("emalta.json")]).then(function(r){montar(r[0],r[1],r[2])})
   .catch(function(e){document.getElementById("corpo").innerHTML='<div class="aviso">Não consegui abrir os dados: '+esc(e.message)+'</div>'});
 
 function rondaTexto(ed){
@@ -162,7 +162,27 @@ function cardBalanco(a){
   return h+'</div>';
 }
 
-function montar(ed,te){
+function cardEmAlta(a){
+  var kchip=a.temperatura==="quente"?"b-al":"b-au",cls=a.temperatura==="quente"?"alta":"media";
+  var s=a.uol&&a.uol.status,uolhtml;
+  if(s==="ja_deu"&&a.uol.links&&a.uol.links.length)uolhtml='<div class="uol sim"><a href="'+esc(a.uol.links[0])+'" target="_blank" rel="noopener">UOL já deu — ver matéria ↗</a></div>';
+  else if(s==="fraco")uolhtml='<div class="uol" style="color:var(--au);font-size:.86rem">UOL deu de leve — vale aprofundar</div>';
+  else uolhtml='<div class="uol nao">Não localizado no UOL — conferir</div>';
+  var b=a.sinais.busca,im=a.sinais.imprensa;
+  var sinais='<div style="color:var(--dt);font-size:.78rem;margin:2px 0 6px">Busca (Trends): '+(b.presente?esc(b.volume||"sim"):"não")+' · Imprensa (G. Notícias): '+im.veiculos_distintos+' veículos/'+im.janela_horas+'h</div>';
+  var manch=(a.manchetes||[]).slice(0,4).map(function(m){
+    return m.url?'<a href="'+esc(m.url)+'" target="_blank" rel="noopener"><span class="v">'+esc(m.veiculo)+'</span>'+esc(m.titulo)+'</a>':'<span><span class="v">'+esc(m.veiculo)+'</span>'+esc(m.titulo)+'</span>'
+  }).join("");
+  var h='<div class="card '+cls+'"><span class="badge '+kchip+'">'+esc(a.temperatura)+'</span>'+(a.origem==="descoberta"?'<span class="badge b-az">novo</span>':'')+'<b>'+esc(a.entidade)+'</b>';
+  h+='<h3>'+esc(a.titulo)+'</h3>';
+  if(a.por_que)h+='<p class="resumo">'+esc(a.por_que)+'</p>';
+  h+=sinais+uolhtml;
+  if(a.correr_atras&&a.correr_atras.length)h+='<div class="rot">Correr atrás</div><ul class="apurar">'+a.correr_atras.map(function(c){return '<li>'+esc(c)+'</li>'}).join("")+'</ul>';
+  if(manch)h+='<div class="rot">A concorrência deu</div><div class="linhas">'+manch+'</div>';
+  return h+'</div>';
+}
+
+function montar(ed,te,em){
   var nav=document.getElementById("nav"),corpo=document.getElementById("corpo"),h="",secoes=[];
   if(ed){
     document.getElementById("quando").textContent="atualizado "+quandoBR(ed.geradoEm);
@@ -177,6 +197,7 @@ function montar(ed,te){
       if(x.prioridade==="alta")_urg.push(it);else if(x.prioridade==="media")_olh.push(it);
     });
     (ed.balanco||[]).forEach(function(b){(b.assuntos||[]).forEach(function(a){if(/lider/i.test(a.veredito||""))_bem.push({n:"",t:a.titulo})})});
+    ((em&&em.assuntos)||[]).forEach(function(a){if(a.temperatura==="quente"&&a.uol&&a.uol.status==="nao_localizado")_urg.push({n:"Em alta",t:a.titulo})});
     function _col(cls,tit,arr,lab){
       var inner=arr.length?'<ul>'+arr.slice(0,5).map(function(x){return '<li>'+(lab&&x.n?'<b>'+esc(x.n)+'</b> — ':'')+esc(x.t)+'</li>'}).join("")+'</ul>':'<div class="vazio">nada aqui agora</div>';
       return '<div class="col3 '+cls+'"><div class="h">'+esc(tit)+'</div>'+inner+'</div>';
@@ -208,16 +229,12 @@ function montar(ed,te){
     h+='<section><div class="aviso">A leitura ainda não foi gerada. Veja o que está em alta agora, abaixo.</div></section>';
   }
 
-  if(te&&te.trends){
-    secoes.push(["agora","Em alta agora"]);
-    h+='<section id="agora"><div class="th">Em alta agora · '+esc(quandoBR(te.geradoEm))+'</div>';
-    [["4","últimas 4h"],["24","últimas 24h"]].forEach(function(par){
-      var b=te.trends[par[0]]||{},its=b.itens||[];
-      h+='<div style="color:var(--mt);font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;margin:10px 0 6px">'+par[1]+'</div>';
-      if((b.status&&b.status!=="ok"&&!its.length)){h+='<div class="resumo">'+esc(b.aviso||"não carregou")+'</div>';return}
-      if(!its.length){h+='<div class="resumo">sem alta</div>';return}
-      h+='<div class="live">'+its.slice(0,12).map(function(it){return '<span class="t">'+esc(it.termo)+(it.volume?' <span class="v">'+esc(it.volume)+'</span>':'')+'</span>'}).join("")+'</div>';
-    });
+  if(em&&em.assuntos&&em.assuntos.length){
+    secoes.push(["agora","Em alta hoje"]);
+    h+='<section id="agora"><h2 class="parte">Em alta hoje <span style="font-size:.7rem;color:var(--mt)">atualizado '+esc(quandoBR(em.geradoEm))+'</span></h2>';
+    h+='<p class="psub">Cruzamento de busca (Google Trends) e imprensa (Google Notícias). Quente = alta nos dois lados; morno = só um. Os quentes sem cobertura do UOL já sobem para "Ir atrás, urgente".</p>';
+    em.assuntos.forEach(function(a){h+=cardEmAlta(a)});
+    if(em.fontesForaDoAlcance&&em.fontesForaDoAlcance.length)h+='<p class="nota">'+em.fontesForaDoAlcance.map(esc).join("; ")+'.</p>';
     h+='</section>';
   }
   if(ed&&ed.fontesForaDoAlcance&&ed.fontesForaDoAlcance.length)
