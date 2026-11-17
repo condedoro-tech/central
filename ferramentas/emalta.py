@@ -173,13 +173,21 @@ def redigir(assuntos):
     """Uma chamada: para cada assunto, gera titulo/por_que/correr_atras. Não altera números."""
     compact = [{"i": n, "entidade": a["entidade"], "temperatura": a["temperatura"],
                 "sinais": a["sinais"], "uol": a["uol"]["status"],
-                "manchetes": [m["titulo"] for m in a["manchetes"][:6]]} for n, a in enumerate(assuntos)]
-    sis = ('Você redige cards curtos para a redação do UOL Esporte a partir de dados de assuntos em alta. '
-           'Use APENAS as manchetes e números dados; não acrescente fato, data, cargo, idade ou clube. '
-           'Sem linha fina. Para cada item responda: "titulo" (até 12 palavras, direto), "por_que" (1 frase até '
-           '20 palavras citando os sinais de busca e/ou imprensa; se só houver um sinal, comece com "Sinal fraco:"), '
-           '"correr_atras" (1 a 2 bullets acionáveis). Se não der para entender pelas manchetes, '
-           '"titulo":"Assunto não identificado" e correr_atras []. '
+                "manchetes": [f"{m['veiculo']}: {m['titulo']}" for m in a["manchetes"][:6]]} for n, a in enumerate(assuntos)]
+    sis = ('Você é pauteiro-chefe do UOL Esporte. Recebe um assunto em alta (manchetes da concorrência + sinais de '
+           'busca e imprensa) e escreve, usando SOMENTE as manchetes e números dados, sem inventar fato, data, cargo, '
+           'idade ou clube. Sem linha fina. Para cada item responda: '
+           '"titulo" (até 12 palavras, direto e jornalístico); '
+           '"por_que" (1 frase até 20 palavras citando os sinais; se só houver busca OU só imprensa, comece com "Sinal fraco:"); '
+           '"correr_atras" (2 a 4 desdobramentos CONCRETOS que a redação deve perseguir hoje — cada um é uma pauta de verdade). '
+           'Régua de qualidade (vale ouro): sugestão ruim é pior que nenhuma. É PROIBIDO o óbvio — nada de "confirmar com o '
+           'clube", "acompanhar", "ouvir o outro lado", "buscar posição oficial", "apurar os detalhes". Isso não é desdobramento. '
+           'Puxe os ângulos que renderem de verdade, nomeando-os: Dinheiro (quanto, que caixa, contrato, cláusula); '
+           'Mercado (quem lucra ou perde, que clube ou empresário se mexe); Número (dado que vira pauta própria); '
+           'Tribunal/Regra (STJD, CBF, cláusula, decisão); História (já aconteceu, como foi); Gente (jogador, torcida, '
+           'dirigente, personagem); Impacto (escalação, título, reta final, próximo jogo); Risco (crise, punição, polêmica). '
+           'Cada desdobramento tem de ser importante o bastante para um editor abrir a apuração agora. '
+           'Se as manchetes não sustentarem o assunto, "titulo":"Assunto não identificado" e correr_atras []. '
            'Responda APENAS JSON: {"cards":[{"i":0,"titulo":"","por_que":"","correr_atras":[""]}]}')
     try:
         r = _claude(sis, json.dumps({"assuntos": compact}, ensure_ascii=False))
@@ -231,7 +239,7 @@ def montar():
             "entidade": ent["nome"], "origem": "descoberta" if ent["tipo"] == "descoberta" else "lista",
             "temperatura": temperatura,
             "sinais": {"busca": busca, "imprensa": {"veiculos_distintos": veic, "janela_horas": CONFIG["janela_horas"]}},
-            "manchetes": [{"titulo": i["titulo"], "veiculo": i["veiculo"]} for i in imp[:6]],
+            "manchetes": [{"titulo": i["titulo"], "veiculo": i["veiculo"], "url": i["url"]} for i in imp[:6]],
             "uol": uol, "fontes_indisponiveis": fora + fontes_fora,
         })
         time.sleep(1.2)
@@ -265,8 +273,10 @@ def resumo_sombra(assuntos, fontes_fora):
             linhas.append(f"- Por quê: {a['por_que']}")
         for c in a.get("correr_atras", []):
             linhas.append(f"- Correr atrás: {c}")
-        for m in a["manchetes"][:3]:
+        for m in a["manchetes"][:4]:
             linhas.append(f"    · {m['veiculo']}: {m['titulo']}")
+            if m.get("url"):
+                linhas.append(f"      {m['url']}")
     return "\n".join(linhas)
 
 
