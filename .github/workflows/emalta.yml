@@ -1,13 +1,11 @@
-# "Em alta hoje" — segunda rodada do dia, à tarde.
-# De manhã o "Em alta" já sai junto da leitura editorial (editorial.yml, ~9h). Este aqui o atualiza de novo às 17h,
-# para pegar o que esquentou na tarde. Regrava emalta.json cifrado; as páginas (index.html e emalta.html) leem esse
-# arquivo na hora de abrir, então não precisam ser remontadas aqui.
-# Usa o tendencias.json mais recente (o coletor roda de 2 em 2h, inclusive às 17h) para o sinal de busca.
-name: Em alta hoje (tarde)
+# "Em alta hoje" — rodada MANUAL (você dispara quando quiser).
+# De manhã o "Em alta" já sai sozinho junto da leitura editorial (editorial.yml, ~9h). Este aqui serve para
+# atualizar de novo na hora que você quiser (ex.: à tarde, quando algo esquentou). NÃO roda sozinho.
+# Regrava emalta.json cifrado; as páginas (index.html e emalta.html) leem esse arquivo na hora de abrir.
+# Usa o tendencias.json mais recente (o coletor roda de 2 em 2h) para o sinal de busca.
+name: Em alta hoje (manual)
 
 on:
-  schedule:
-    - cron: "25 20 * * 1-5"   # 17h25 em Brasília, de segunda a sexta (depois do coletor de tendências das 17h)
   workflow_dispatch:
     inputs:
       sombra:
@@ -51,7 +49,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -f emalta.json
           if git diff --cached --quiet; then echo "Nada mudou"; exit 0; fi
-          git commit -m "Em alta hoje (tarde)"
+          git commit -m "Em alta hoje (manual)"
           for i in 1 2 3; do
             git pull --rebase origin main && git push origin main && exit 0
             sleep 10
