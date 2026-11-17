@@ -27,8 +27,16 @@ function abrir(chave){return crypto.subtle.decrypt({name:"AES-GCM",iv:bin(IV)},c
 function importar(raw){return crypto.subtle.importKey("raw",raw,"AES-GCM",false,["decrypt"])}
 function derivar(senha){var e=new TextEncoder();return crypto.subtle.importKey("raw",e.encode(senha),"PBKDF2",false,["deriveBits"]).then(function(m){
   return crypto.subtle.deriveBits({name:"PBKDF2",salt:bin(SAL),iterations:IT,hash:"SHA-256"},m,256)})}
-var guardada=null;try{guardada=localStorage.getItem(K)}catch(e){}
-if(guardada){try{sessionStorage.setItem(KS,guardada)}catch(e){}importar(bin(guardada)).then(abrir).catch(function(){try{localStorage.removeItem(K)}catch(e){}})}
+var guardada=null,sessao=null;
+try{guardada=localStorage.getItem(K)}catch(e){}
+try{sessao=sessionStorage.getItem(KS)}catch(e){}
+// auto-abre só depois do parse: document.write em callback só substitui a página inteira pós-carga
+function autoAbrir(raw,limpar){importar(bin(raw)).then(abrir).catch(function(){try{limpar()}catch(e){}})}
+function iniciar(){
+  if(guardada)autoAbrir(guardada,function(){localStorage.removeItem(K)});
+  else if(sessao)autoAbrir(sessao,function(){sessionStorage.removeItem(KS)});
+}
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",iniciar);else iniciar();
 document.getElementById("f").addEventListener("submit",function(ev){ev.preventDefault();
   var b=document.getElementById("b"),erro=document.getElementById("erro");b.disabled=true;b.textContent="Abrindo...";erro.textContent="";
   derivar(document.getElementById("s").value.trim()).then(function(raw){

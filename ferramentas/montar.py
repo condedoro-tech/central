@@ -17,7 +17,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ITERACOES = 600000
 # páginas cifradas: (conteúdo de origem, arquivo publicado). Todas atrás da mesma senha.
-PAGINAS = [("central.html", "index.html"), ("aprofundar.html", "aprofundar.html")]
+PAGINAS = [("central.html", "index.html"), ("aprofundar.html", "aprofundar.html"), ("emalta.html", "emalta.html")]
 
 
 def main():

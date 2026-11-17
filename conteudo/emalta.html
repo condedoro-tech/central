@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="pt-br"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>Em alta hoje — Radar UOL Esporte</title>
+<style>
+:root{--bg:#f2f1ee;--cd:#fff;--tx:#14171f;--mt:#5d6675;--ln:#e3e1dc;--ac:#1a2233;--au:#b4820a;--al:#c0392b;--ok:#1b7f4b;--az:#2563a8;--dt:#8a8578}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1115;--cd:#171a21;--tx:#eef0f3;--mt:#9aa1ad;--ln:#2a2f39;--ac:#eef0f3;--au:#e0a92b;--al:#ff6b5e;--ok:#4cc38a;--az:#6ea8e6;--dt:#6c7482}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,sans-serif;padding:16px}
+.capa{max-width:860px;margin:0 auto}
+header{border-bottom:2px solid var(--ac);padding-bottom:10px}
+.selo{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--au);font-weight:700}
+h1{font-size:1.6rem;margin:2px 0}
+a.volta{font-size:.85rem;color:var(--mt);text-decoration:none}a.volta:hover{color:var(--tx)}
+.psub{color:var(--mt);font-size:.88rem;margin:6px 0 14px}
+.card{background:var(--cd);border:1px solid var(--ln);border-radius:12px;padding:14px 16px;margin:10px 0}
+.card.alta{border-left:4px solid var(--al)}.card.media{border-left:4px solid var(--au)}
+.badge{display:inline-block;font-size:.66rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-radius:4px;padding:1px 7px;margin-right:7px;border:1px solid}
+.b-al{color:var(--al);border-color:var(--al)}.b-au{color:var(--au);border-color:var(--au)}.b-az{color:var(--az);border-color:var(--az)}
+.card>b{font-size:1.05rem}
+.card h3{font-size:1.08rem;margin:8px 0 3px;line-height:1.25}
+.card .resumo{color:var(--mt);font-size:.92rem;margin:0 0 6px}
+.sinais{color:var(--dt);font-size:.78rem;margin:2px 0 6px}
+.rot{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--mt);margin:8px 0 4px;font-weight:600}
+.apurar{margin:4px 0 0;padding-left:18px}.apurar li{font-size:.9rem;margin-bottom:3px}
+.linhas a,.linhas span{display:block;font-size:.88rem;padding:3px 0;border-top:1px solid var(--ln);color:var(--tx);text-decoration:none}
+.linhas a:hover{color:var(--mt)}.linhas .v{color:var(--au);font-weight:700;font-size:.72rem;text-transform:uppercase;margin-right:6px}
+.uol.sim a{color:var(--ok);text-decoration:none;font-weight:600}.uol.nao{color:var(--al);font-size:.86rem}
+.aviso{background:var(--cd);border:1px solid var(--al);color:var(--al);border-radius:10px;padding:12px 14px;font-size:.9rem}
+.nota{color:var(--dt);font-size:.77rem;margin-top:12px}
+</style></head><body>
+<div class="capa">
+<header>
+  <div class="selo" id="selo">Radar UOL Esporte</div>
+  <h1>Em alta hoje</h1>
+  <a class="volta" href="./">← voltar ao radar</a>
+</header>
+<p class="psub">Cruzamento de busca (Google Trends) e imprensa (Google Notícias). <b>Quente</b> = alta nos dois lados; <b>morno</b> = só um. Mostra se o UOL já cobriu.</p>
+<div id="corpo"></div>
+</div>
+<script>
+(function(){
+var KS="central-chave-sessao";
+function bin(b){return Uint8Array.from(atob(b),function(c){return c.charCodeAt(0)})}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function quandoBR(iso){if(!iso)return"";var dt=new Date(iso);if(isNaN(dt))return iso;return dt.toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",timeZone:"America/Sao_Paulo"})}
+var raw=null;try{raw=sessionStorage.getItem(KS)}catch(e){}
+if(!raw){document.getElementById("corpo").innerHTML='<div class="aviso">Sessão expirou. Recarregue e entre de novo.</div>';return}
+
+fetch("emalta.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null}).then(function(pct){
+  if(!pct)throw new Error("ainda não gerado");
+  return crypto.subtle.importKey("raw",bin(raw),"AES-GCM",false,["decrypt"]).then(function(k){
+    return crypto.subtle.decrypt({name:"AES-GCM",iv:bin(pct.iv)},k,bin(pct.dados))
+  }).then(function(buf){return JSON.parse(new TextDecoder().decode(buf))})
+}).then(montar).catch(function(e){
+  document.getElementById("corpo").innerHTML='<div class="aviso">Em alta hoje ainda não foi gerado nesta rodada ('+esc(e.message)+').</div>'
+});
+
+function card(a){
+  var kchip=a.temperatura==="quente"?"b-al":"b-au",cls=a.temperatura==="quente"?"alta":"media";
+  var s=a.uol&&a.uol.status,uol;
+  if(s==="ja_deu"&&a.uol.links&&a.uol.links.length)uol='<div class="uol sim"><a href="'+esc(a.uol.links[0])+'" target="_blank" rel="noopener">UOL já deu — ver matéria ↗</a></div>';
+  else if(s==="fraco")uol='<div class="uol" style="color:var(--au);font-size:.86rem">UOL deu de leve — vale aprofundar</div>';
+  else uol='<div class="uol nao">Não localizado no UOL — conferir</div>';
+  var b=a.sinais.busca,im=a.sinais.imprensa;
+  var sinais='<div class="sinais">Busca (Trends): '+(b.presente?esc(b.volume||"sim"):"não")+' · Imprensa (G. Notícias): '+im.veiculos_distintos+' veículos/'+im.janela_horas+'h</div>';
+  var manch=(a.manchetes||[]).slice(0,4).map(function(m){
+    return m.url?'<a href="'+esc(m.url)+'" target="_blank" rel="noopener"><span class="v">'+esc(m.veiculo)+'</span>'+esc(m.titulo)+'</a>':'<span><span class="v">'+esc(m.veiculo)+'</span>'+esc(m.titulo)+'</span>'
+  }).join("");
+  var h='<div class="card '+cls+'"><span class="badge '+kchip+'">'+esc(a.temperatura)+'</span>'+(a.origem==="descoberta"?'<span class="badge b-az">novo</span>':'')+'<b>'+esc(a.entidade)+'</b>';
+  h+='<h3>'+esc(a.titulo)+'</h3>';
+  if(a.por_que)h+='<p class="resumo">'+esc(a.por_que)+'</p>';
+  h+=sinais+uol;
+  if(a.correr_atras&&a.correr_atras.length)h+='<div class="rot">Correr atrás</div><ul class="apurar">'+a.correr_atras.map(function(c){return '<li>'+esc(c)+'</li>'}).join("")+'</ul>';
+  if(manch)h+='<div class="rot">A concorrência deu</div><div class="linhas">'+manch+'</div>';
+  return h+'</div>';
+}
+function montar(em){
+  document.getElementById("selo").textContent="Radar UOL Esporte · atualizado "+quandoBR(em.geradoEm);
+  var as=(em&&em.assuntos)||[];
+  var h=as.length?as.map(card).join(""):'<div class="aviso">Nenhum assunto cruzou os limites nesta rodada.</div>';
+  if(em.fontesForaDoAlcance&&em.fontesForaDoAlcance.length)h+='<p class="nota">'+em.fontesForaDoAlcance.map(esc).join("; ")+'.</p>';
+  document.getElementById("corpo").innerHTML=h;
+}
+})();
+</script>
+</body></html>

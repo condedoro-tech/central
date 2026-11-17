@@ -162,26 +162,6 @@ function cardBalanco(a){
   return h+'</div>';
 }
 
-function cardEmAlta(a){
-  var kchip=a.temperatura==="quente"?"b-al":"b-au",cls=a.temperatura==="quente"?"alta":"media";
-  var s=a.uol&&a.uol.status,uolhtml;
-  if(s==="ja_deu"&&a.uol.links&&a.uol.links.length)uolhtml='<div class="uol sim"><a href="'+esc(a.uol.links[0])+'" target="_blank" rel="noopener">UOL já deu — ver matéria ↗</a></div>';
-  else if(s==="fraco")uolhtml='<div class="uol" style="color:var(--au);font-size:.86rem">UOL deu de leve — vale aprofundar</div>';
-  else uolhtml='<div class="uol nao">Não localizado no UOL — conferir</div>';
-  var b=a.sinais.busca,im=a.sinais.imprensa;
-  var sinais='<div style="color:var(--dt);font-size:.78rem;margin:2px 0 6px">Busca (Trends): '+(b.presente?esc(b.volume||"sim"):"não")+' · Imprensa (G. Notícias): '+im.veiculos_distintos+' veículos/'+im.janela_horas+'h</div>';
-  var manch=(a.manchetes||[]).slice(0,4).map(function(m){
-    return m.url?'<a href="'+esc(m.url)+'" target="_blank" rel="noopener"><span class="v">'+esc(m.veiculo)+'</span>'+esc(m.titulo)+'</a>':'<span><span class="v">'+esc(m.veiculo)+'</span>'+esc(m.titulo)+'</span>'
-  }).join("");
-  var h='<div class="card '+cls+'"><span class="badge '+kchip+'">'+esc(a.temperatura)+'</span>'+(a.origem==="descoberta"?'<span class="badge b-az">novo</span>':'')+'<b>'+esc(a.entidade)+'</b>';
-  h+='<h3>'+esc(a.titulo)+'</h3>';
-  if(a.por_que)h+='<p class="resumo">'+esc(a.por_que)+'</p>';
-  h+=sinais+uolhtml;
-  if(a.correr_atras&&a.correr_atras.length)h+='<div class="rot">Correr atrás</div><ul class="apurar">'+a.correr_atras.map(function(c){return '<li>'+esc(c)+'</li>'}).join("")+'</ul>';
-  if(manch)h+='<div class="rot">A concorrência deu</div><div class="linhas">'+manch+'</div>';
-  return h+'</div>';
-}
-
 function montar(ed,te,em){
   var nav=document.getElementById("nav"),corpo=document.getElementById("corpo"),h="",secoes=[];
   if(ed){
@@ -229,19 +209,12 @@ function montar(ed,te,em){
     h+='<section><div class="aviso">A leitura ainda não foi gerada. Veja o que está em alta agora, abaixo.</div></section>';
   }
 
-  if(em&&em.assuntos&&em.assuntos.length){
-    secoes.push(["agora","Em alta hoje"]);
-    h+='<section id="agora"><h2 class="parte">Em alta hoje <span style="font-size:.7rem;color:var(--mt)">atualizado '+esc(quandoBR(em.geradoEm))+'</span></h2>';
-    h+='<p class="psub">Cruzamento de busca (Google Trends) e imprensa (Google Notícias). Quente = alta nos dois lados; morno = só um. Os quentes sem cobertura do UOL já sobem para "Ir atrás, urgente".</p>';
-    em.assuntos.forEach(function(a){h+=cardEmAlta(a)});
-    if(em.fontesForaDoAlcance&&em.fontesForaDoAlcance.length)h+='<p class="nota">'+em.fontesForaDoAlcance.map(esc).join("; ")+'.</p>';
-    h+='</section>';
-  }
   if(ed&&ed.fontesForaDoAlcance&&ed.fontesForaDoAlcance.length)
     h+='<p class="nota">Fora do alcance: '+ed.fontesForaDoAlcance.map(esc).join("; ")+'.</p>';
 
   nav.innerHTML=secoes.map(function(p){return '<a href="#'+p[0]+'">'+esc(p[1])+'</a>'}).join("")
     +(ed?'<a class="botao copiar" href="#" title="Copia a ronda em texto para você colar num chat do Claude">Copiar ronda</a>':'')
+    +'<a class="botao" href="emalta.html" target="_blank" rel="noopener" title="Abre o Em alta hoje em página própria">Em alta hoje ↗</a>'
     +'<a class="botao" href="aprofundar.html" target="_blank" rel="noopener" title="Abre a ferramenta de aprofundar uma pauta">Aprofundar pauta ↗</a>';
   corpo.innerHTML=h;
   var bc=nav.querySelector(".copiar");
