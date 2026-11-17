@@ -56,9 +56,29 @@ def gnews(consulta, horas, site=None):
         if not m_t:
             continue
         titulo = re.sub(r"\s-\s[^-]+$", "", limpar(m_t.group(1)))
+        if eh_lixo(titulo):            # calendário / "onde assistir" / evergreen fora
+            continue
         itens.append({"titulo": titulo, "veiculo": (limpar(m_s.group(1)) if m_s else "?"),
                       "url": limpar(m_u.group(1)) if m_u else ""})
     return itens
+
+
+# não-imprensa (não conta como veículo): redes sociais, sites oficiais de clube, federações/CBF
+NAO_IMPRENSA = re.compile(r"instagram|facebook|youtube|tiktok|twitter|threads|^x$|site oficial|clube de regatas|federa[çc][ãa]o|confedera[çc][ãa]o|\bcbf\b|\bconmebol\b|\bfifa\b", re.I)
+CLUBES_FONTE = re.compile(r"^(flamengo|corinthians|palmeiras|sao paulo|santos|vasco|gremio|internacional|cruzeiro|atletico|botafogo|fluminense|bahia|fortaleza|bragantino|coritiba|vitoria|mirassol)\b")
+# títulos de calendário / serviço que não representam o assunto
+LIXO_TITULO = re.compile(r"onde assistir|que horas|\bao vivo\b|transmiss[ãa]o|prov[áa]veis escala|escala[çc][õo]es prov|pr[ée]-jogo|palpite|maior [íi]dolo|\bvote\b|saiba onde|minuto a minuto|acompanhe em tempo real", re.I)
+# termos amplos que a descoberta NÃO deve virar entidade
+AMPLO = re.compile(r"^(cbf|fifa|conmebol|uefa|brasileir[ãa]o|libertadores|copa do brasil|s[ée]rie [abc]|sul-americana|mundial|futebol|sele[çc][ãa]o)\b")
+
+
+def eh_imprensa(veiculo):
+    v = (veiculo or "").strip()
+    return bool(v) and v != "?" and not NAO_IMPRENSA.search(v) and not CLUBES_FONTE.search(norm(v))
+
+
+def eh_lixo(titulo):
+    return bool(LIXO_TITULO.search(titulo or ""))
 
 
 def trends_termos():
@@ -128,7 +148,9 @@ def descobrir(termos_sem_entidade):
     lista = "\n".join(f"- {t['termo']}" for t in termos_sem_entidade[:20])
     sis = ('Classifique cada termo de busca em alta como esporte brasileiro ou não. Responda APENAS JSON: '
            '{"itens":[{"termo":"","classe":"entidade_esportiva|jogo|nao_esporte|incerto","entidade_sugerida":""}]}. '
-           'entidade_esportiva = time, atleta, técnico, competição ou assunto esportivo que renda matéria. '
+           'entidade_esportiva = um atleta, técnico, dirigente ou time ESPECÍFICO, ou um assunto concreto que renda matéria. '
+           'NÃO classifique como entidade_esportiva instituições, federações e competições amplas (CBF, Fifa, Conmebol, '
+           'Brasileirão, Libertadores, Copa do Brasil) nem o termo "futebol" — são amplos demais, marque "incerto". '
            'jogo = confronto/partida. Use "incerto" quando não der para saber.')
     try:
         r = _claude(sis, "Termos:\n" + lista)
@@ -139,6 +161,8 @@ def descobrir(termos_sem_entidade):
     for it in r.get("itens", []):
         if it.get("classe") == "entidade_esportiva" and it.get("termo"):
             nome = it.get("entidade_sugerida") or it["termo"]
+            if AMPLO.search(norm(nome)):          # barra instituição/competição ampla
+                continue
             cand.append({"nome": nome, "tipo": "descoberta", "aliases": [norm(nome)], "consulta": f'"{nome}"'})
         if len(cand) >= CONFIG["max_novos"]:
             break
@@ -186,8 +210,9 @@ def montar():
     for ent in candidatos:
         busca = sinal_busca(ent, termos)
         try:
-            imp = gnews(ent["consulta"], CONFIG["janela_horas"])
-            veic = len({norm(i["veiculo"]) for i in imp if i["veiculo"] != "?"})
+            imp_bruto = gnews(ent["consulta"], CONFIG["janela_horas"])
+            imp = [i for i in imp_bruto if eh_imprensa(i["veiculo"])]   # só imprensa de verdade
+            veic = len({norm(i["veiculo"]) for i in imp})
             fora = []
         except Exception as e:
             imp, veic, fora = [], 0, [f"Google Notícias: {str(e)[:40]}"]
