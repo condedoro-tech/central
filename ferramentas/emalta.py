@@ -219,6 +219,9 @@ def montar():
         imprensa_alta = veic >= CONFIG["min_veiculos"]
         if not (busca["presente"] or imprensa_alta):
             continue
+        # entidade de descoberta só vale se a própria imprensa a cita (senão o termo do Trends é ruído)
+        if ent["tipo"] == "descoberta" and not any(casa_alias(ent, i["titulo"]) for i in imp):
+            continue
         temperatura = "quente" if (busca["presente"] and imprensa_alta) else "morno"
         try:
             uol = uol_status(ent)
@@ -241,6 +244,8 @@ def montar():
     assuntos = assuntos[:CONFIG["max_cards"]]
     if assuntos:
         redigir(assuntos)
+    # joga fora o que o Haiku não conseguiu identificar pelas manchetes
+    assuntos = [a for a in assuntos if not str(a.get("titulo", "")).lower().startswith("assunto não identificado")]
     return assuntos, fontes_fora
 
 
