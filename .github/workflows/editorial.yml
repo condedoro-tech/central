@@ -74,11 +74,20 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f editorial.json emalta.json
-          if git diff --cached --quiet; then echo "Nada mudou"; exit 0; fi
-          git commit -m "Leitura editorial do dia"
-          for i in 1 2 3; do
-            git pull --rebase origin main && git push origin main && exit 0
-            sleep 10
+          # editorial.json e emalta.json são cifra (mudam inteiros a cada rodada): não dá para "mesclar".
+          # Guarda as versões novas e reconstrói o commit sempre em cima do origin mais recente.
+          cp editorial.json "$RUNNER_TEMP/editorial.json.novo"
+          [ -f emalta.json ] && cp emalta.json "$RUNNER_TEMP/emalta.json.novo" || true
+          for i in 1 2 3 4 5; do
+            git fetch -q origin main
+            git reset -q --hard origin/main
+            cp "$RUNNER_TEMP/editorial.json.novo" editorial.json
+            [ -f "$RUNNER_TEMP/emalta.json.novo" ] && cp "$RUNNER_TEMP/emalta.json.novo" emalta.json || true
+            git add -f editorial.json emalta.json
+            if git diff --cached --quiet; then echo "Nada mudou"; exit 0; fi
+            git commit -q -m "Leitura editorial do dia"
+            git push origin main && exit 0
+            echo "push falhou (origin mudou?), tentando de novo"
+            sleep $((i*5))
           done
           exit 1
