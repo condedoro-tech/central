@@ -1,11 +1,9 @@
-# Leitura editorial do dia (pedido do dono).
-# Roda 1x/dia de manhã, quando "ontem" já fechou. Coleta larga + Claude escreve a análise. Grava editorial.json cifrado.
+# Leitura editorial do dia (a "ronda") — rodada MANUAL (você dispara quando pedir).
+# NÃO roda sozinho. Coleta larga + Claude escreve a análise. Grava editorial.json cifrado e, de brinde, o emalta.json.
 # Precisa de dois segredos: CENTRAL_SENHA (chave da Central) e ANTHROPIC_API_KEY (conta da Anthropic).
 name: Leitura editorial do dia
 
 on:
-  schedule:
-    - cron: "7 12 * * 1-5"   # 09h07 em Brasília, de segunda a sexta (na segunda, lê sex+sáb+dom)
   workflow_dispatch:
     inputs:
       teste:
