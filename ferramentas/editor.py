@@ -30,7 +30,8 @@ from tendencias import (BRT, CLUBES, GOOGLE, agora, baixar, cifrar, ge_home,
                         limpar, norm, uol_home, PARALELO)
 
 # Modelo: haiku-5-5 (mais barato, p/ testes) < sonnet-5-5 (equilíbrio) < opus-5-5 (melhor análise).
-MODELO = "claude-haiku-5-5"
+# Padrão é o barato; a rodada pode pedir outro via RONDA_MODELO (botão no workflow).
+MODELO = os.environ.get("RONDA_MODELO", "").strip() or "claude-haiku-5-5"
 ESFORCO = "medium"
 FALLBACK_OK = {"claude-opus-5-5", "claude-sonnet-5-5", "claude-opus-5", "claude-fable-5-2", "claude-fable-5-1"}
 

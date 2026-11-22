@@ -18,6 +18,10 @@ on:
         description: "Datas específicas AAAA-MM-DD separadas por vírgula (ex.: 2026-11-07,2026-11-08). Vazio = usa a janela."
         required: false
         default: ""
+      modelo:
+        description: "Modelo do Claude para a análise. Vazio = haiku (barato, padrão). Teste: claude-sonnet-5-5."
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -46,6 +50,7 @@ jobs:
           CENTRAL_SENHA: ${{ secrets.CENTRAL_SENHA }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           RONDA_DESTINOS: ${{ secrets.RONDA_DESTINOS }}
+          RONDA_MODELO: ${{ inputs.modelo }}
         run: |
           if [ -n "${{ inputs.datas }}" ]; then
             python editor.py --datas=${{ inputs.datas }}
