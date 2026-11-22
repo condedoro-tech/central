@@ -51,6 +51,9 @@ COLETA_PAR = 5          # linhas simultâneas na coleta (Google News tolera; 429
 # Fontes que NÃO contam como imprensa na coleta por assunto (redes, sites de clube, federações).
 NAO_IMPRENSA = re.compile(r"instagram|facebook|youtube|tiktok|twitter|threads|\.gov|site oficial|"
                           r"confedera|federa[çc][aã]o|\bcbf\b|\bconmebol\b|\bfifa\b", re.I)
+# títulos de serviço/calendário/óbito que não representam pauta
+LIXO = re.compile(r"onde assistir|onde vai passar|que horas|transmiss[ãa]o ao vivo|prov[áa]ve(l|is) escala|"
+                  r"escala[çc][õo]es prov|minuto a minuto|\bpalpite\b|nota de falecimento|\bfalecimento\b|\bób[íi]to\b", re.I)
 _VEIC_UOL = re.compile(r"uol", re.I)
 _VEIC_ALIAS = [
     (re.compile(r"globoesporte|globo\s*esporte|ge\.globo|\bge\b", re.I), "ge"),
@@ -98,7 +101,7 @@ def _itens_rss(xml, veiculo_fixo=None, apelido=None, clube=None):
         if not (m_tit and m_url):
             continue
         titulo = re.sub(r" - [^-]+$", "", limpar(m_tit.group(1)))
-        if not titulo or (apelido and not re.search(apelido, titulo)):
+        if not titulo or LIXO.search(titulo) or (apelido and not re.search(apelido, titulo)):
             continue
         if veiculo_fixo:
             veic = veiculo_fixo
@@ -178,12 +181,23 @@ def coletar_largo(alvos):
 
 
 def dossie(itens):
-    """Dossiê com o UOL destacado como nosso veículo, concorrência por veículo, e blocos por clube e seleção."""
-    linhas = []
+    """Monta o dossiê com códigos curtos (r1, r2...) no lugar das URLs. Devolve (texto, mapa ref->url)."""
+    linhas, mapa, por_url = [], {}, {}
+
+    def ref(i):
+        u = i.get("url") or ""
+        if not u:
+            return "-"
+        if u not in por_url:
+            r = "r" + str(len(por_url) + 1)
+            por_url[u] = r
+            mapa[r] = u
+        return por_url[u]
+
     uol = [i for i in itens if i["veiculo"] == "UOL"]
     linhas.append(f"### NOSSO VEÍCULO — UOL ({len(uol)}) ###")
     for i in uol[:80]:
-        linhas.append(f"[UOL {i['data']}] {i['titulo']} | {i['url']}")
+        linhas.append(f"[UOL {i['data']}] {i['titulo']} | {ref(i)}")
     linhas.append("\n### CONCORRÊNCIA (por veículo, maiores primeiro) ###")
     por_veiculo = {}
     for i in itens:
@@ -198,31 +212,32 @@ def dossie(itens):
         mostrados += 1
         linhas.append(f"\n-- {v} ({len(lst)}) --")
         for i in lst[:25]:
-            linhas.append(f"[{i['data']}] {i['titulo']} | {i['url']}")
+            linhas.append(f"[{i['data']}] {i['titulo']} | {ref(i)}")
             total += 1
     for clube in GRANDES:
         rel = [i for i in itens if i.get("clube") == clube or re.search(CLUBES[clube][1], i["titulo"])]
         linhas.append(f"\n### CLUBE: {clube.upper()} ({len(rel)}) — UOL e concorrência ###")
         for i in rel[:30]:
-            linhas.append(f"[{i['veiculo']} {i['data']}] {i['titulo']} | {i['url']}")
+            linhas.append(f"[{i['veiculo']} {i['data']}] {i['titulo']} | {ref(i)}")
     sel = [i for i in itens if re.search(r"sele[çc][ãa]o|CBF|Ancelotti", i["titulo"])]
     linhas.append(f"\n### SELEÇÃO ({len(sel)}) — UOL e concorrência ###")
     for i in sel[:25]:
-        linhas.append(f"[{i['veiculo']} {i['data']}] {i['titulo']} | {i['url']}")
-    return "\n".join(linhas)
+        linhas.append(f"[{i['veiculo']} {i['data']}] {i['titulo']} | {ref(i)}")
+    return "\n".join(linhas), mapa
 
 
-COMUM = """No dossiê, o bloco "NOSSO VEÍCULO — UOL" é o UOL; todos os outros (ge, ESPN, Lance!, Terra, R7, Goal, TNT Sports, Trivela) são CONCORRÊNCIA.
+COMUM = """No dossiê, o bloco "NOSSO VEÍCULO — UOL" é o UOL; todos os outros (ge, ESPN, Lance!, Terra, R7, Goal, TNT Sports, Trivela e demais) são CONCORRÊNCIA.
+Cada item do dossiê termina com um código curto (ex.: r42) — é a referência daquela matéria.
 Regras invioláveis:
-- Use SOMENTE itens do dossiê. Toda URL citada é copiada EXATA do dossiê. Item sem URL real não entra.
+- Use SOMENTE itens do dossiê. Para citar uma matéria, copie o código EXATO (ex.: r42) no campo "ref"/"uolRef". NUNCA escreva um link, nem invente código. Item sem código (traço "-") não entra.
 - Descartar: "onde assistir", calendário, regulamento, retrospectiva, "tudo sobre".
-- Hedge do UOL: só diga que o UOL deu (uolDeu=true, com uolUrl do bloco UOL) se achar a matéria no bloco UOL. Se não achar, uolDeu=false (= "não localizado no UOL, conferir"). NUNCA afirme que o UOL não deu."""
+- Hedge do UOL: só diga que o UOL deu (uolDeu=true, com uolRef do bloco UOL) se achar a matéria no bloco UOL. Se não achar, uolDeu=false (= "não localizado no UOL, conferir"). NUNCA afirme que o UOL não deu."""
 
 SISTEMA_BALANCO = COMUM + """
 Tarefa: a partir do que saiu ONTEM, liste de 6 a 10 assuntos mais importantes do dia e avalie a cobertura do UOL frente à concorrência.
 veredito, por assunto: "UOL liderou" (deu primeiro/mais completo), "UOL em linha" (deu junto da concorrência), "UOL atrás" (concorrência deu e o UOL não aparece ou deu pouco), "Furo da concorrência" (assunto forte que só a concorrência deu).
 Responda APENAS JSON válido:
-{"assuntos":[{"titulo":"","resumo":"","veredito":"","uolDeu":true,"uolUrl":"","concorrentes":[{"veiculo":"","url":""}],"comentario":"avaliação curta UOL x concorrência"}],
+{"assuntos":[{"titulo":"","resumo":"","veredito":"","uolDeu":true,"uolRef":"","concorrentes":[{"veiculo":"","ref":""}],"comentario":"avaliação curta UOL x concorrência"}],
  "placar":"uma linha: onde o UOL ganhou e onde ficou atrás no dia"}"""
 
 # Destinos curados do UOL Esporte: vêm do segredo RONDA_DESTINOS (não ficam no código público).
@@ -233,7 +248,7 @@ SISTEMA_CORRER = COMUM + """
 Tarefa: montar a lista de prioridades do que o UOL precisa CORRER ATRÁS hoje, a partir do que a concorrência publicou até agora.
 - SEMPRE um card para cada um dos 5, nesta ordem: Corinthians, Flamengo, Palmeiras, São Paulo, Santos. Sem novidade relevante: prioridade "baixa", novidade=false, resumo "sem novidade da concorrência; UOL em dia".
 - Depois, "outros": assuntos importantes (seleção, mercado, tribunal, outro clube).
-- prioridade "alta"/"media"/"baixa" conforme importância. Quanto mais importante, mais detalhe: em "alta" preencha concorrencia (o que o rival deu, com url) e apurar; em "baixa", só resumo curto.
+- prioridade "alta"/"media"/"baixa" conforme importância. Quanto mais importante, mais detalhe: em "alta" preencha concorrencia (o que o rival deu, com o código ref) e apurar; em "baixa", só resumo curto.
 
 Régua de qualidade do "apurar" (sugestão ruim é pior que nenhuma):
 - NÃO sugira o óbvio que a redação já faria sozinha: "repercutir", "ouvir o outro lado", "acompanhar os próximos capítulos", "confirmar com o clube". Isso não é desdobramento.
@@ -249,8 +264,8 @@ Em prioridade baixa, deixe "porque":"" , "titulos":[] e "formatos":[].
 
 Para cada card alta ou média, sugira em "formatos" de 1 a 3 oportunidades ALÉM da matéria em texto, só as que renderem de verdade (não force): flash/carrossel (quando há lista, ranking, comparação, número forte, linha do tempo ou regra nova); vídeo autoral (quando há história, disputa, bastidor ou algo difícil de entender, como um explicador de rosto com apoio); coluna (roteada ao colunista de esporte certo para o assunto); programa de esporte; perfil de rede. Cada item é uma frase pronta, com o destino e, quando vídeo ou flash, o padrão do formato.
 """ + (DESTINOS_ESPORTE + "\n" if DESTINOS_ESPORTE else "") + """Responda APENAS JSON válido:
-{"clubes":[{"clube":"","prioridade":"","novidade":true,"titulo":"","resumo":"","porque":"","concorrencia":[{"veiculo":"","url":"","oque":""}],"uolDeu":false,"uolUrl":"","apurar":[""],"titulos":[""],"formatos":[""]}],
- "outros":[{"tema":"","prioridade":"","titulo":"","resumo":"","porque":"","concorrencia":[{"veiculo":"","url":"","oque":""}],"uolDeu":false,"uolUrl":"","apurar":[""],"titulos":[""],"formatos":[""]}]}"""
+{"clubes":[{"clube":"","prioridade":"","novidade":true,"titulo":"","resumo":"","porque":"","concorrencia":[{"veiculo":"","ref":"","oque":""}],"uolDeu":false,"uolRef":"","apurar":[""],"titulos":[""],"formatos":[""]}],
+ "outros":[{"tema":"","prioridade":"","titulo":"","resumo":"","porque":"","concorrencia":[{"veiculo":"","ref":"","oque":""}],"uolDeu":false,"uolRef":"","apurar":[""],"titulos":[""],"formatos":[""]}]}"""
 
 
 def chamar_claude(texto, sistema, tentativas=4):
@@ -278,32 +293,43 @@ def chamar_claude(texto, sistema, tentativas=4):
     raise erro
 
 
-def _ancora(obj, urls):
-    """Normaliza um item com concorrentes/uol: filtra urls inválidas; uolDeu só com uolUrl real."""
+def _ancora(obj, mapa):
+    """Troca o código ref citado pela URL real (via mapa); descarta ref inexistente (nada de link inventado)."""
     chave = "concorrentes" if "concorrentes" in obj else "concorrencia"
-    obj[chave] = [c for c in obj.get(chave, []) if c.get("url") in urls]
-    if not (obj.get("uolDeu") and obj.get("uolUrl") in urls):
+    saida = []
+    for c in obj.get(chave, []):
+        u = mapa.get(str(c.get("ref", "")).strip())
+        if u:
+            c["url"] = u
+            c.pop("ref", None)
+            saida.append(c)
+    obj[chave] = saida
+    u = mapa.get(str(obj.get("uolRef", "")).strip())
+    if obj.get("uolDeu") and u:
+        obj["uolUrl"] = u
+    else:
         obj["uolDeu"] = False
         obj["uolUrl"] = ""
+    obj.pop("uolRef", None)
     return obj
 
 
 def balanco_do_dia(itens_dia):
-    rel = chamar_claude(dossie(itens_dia), SISTEMA_BALANCO)
-    urls = {i["url"] for i in itens_dia if i.get("url")}
-    assuntos = [_ancora(a, urls) for a in rel.get("assuntos", [])]
+    texto, mapa = dossie(itens_dia)
+    rel = chamar_claude(texto, SISTEMA_BALANCO)
+    assuntos = [_ancora(a, mapa) for a in rel.get("assuntos", [])]
     assuntos = [a for a in assuntos if a["concorrentes"] or a["uolDeu"]]
     return {"assuntos": assuntos, "placar": rel.get("placar", "")}
 
 
 def correr_atras(itens_dia):
-    rel = chamar_claude(dossie(itens_dia), SISTEMA_CORRER)
-    urls = {i["url"] for i in itens_dia if i.get("url")}
-    clubes = {c.get("clube"): _ancora(c, urls) for c in rel.get("clubes", [])}
+    texto, mapa = dossie(itens_dia)
+    rel = chamar_claude(texto, SISTEMA_CORRER)
+    clubes = {c.get("clube"): _ancora(c, mapa) for c in rel.get("clubes", [])}
     ordenados = [clubes.get(nome, {"clube": nome, "prioridade": "baixa", "novidade": False,
                  "titulo": nome, "resumo": "Sem leitura nesta rodada.", "concorrencia": [], "uolDeu": False, "apurar": []})
                  for nome in GRANDES]
-    outros = [_ancora(o, urls) for o in rel.get("outros", [])]
+    outros = [_ancora(o, mapa) for o in rel.get("outros", [])]
     outros = [o for o in outros if o["concorrencia"] or o["uolDeu"]]
     return {"clubes": ordenados, "outros": outros}
 
@@ -328,7 +354,7 @@ def main():
     if teste:
         for d in alvos:
             print(f"\n######## {d} ########")
-            print(dossie([i for i in itens if i["data"] == d]))
+            print(dossie([i for i in itens if i["data"] == d])[0])
         print(f"\n== {len(itens)} itens | balanço {dias_balanco} | hoje {hoje} | falhas {len(falhas)} ==")
         return
 
