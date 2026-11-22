@@ -46,27 +46,94 @@ PORTAIS = [
 UOL_TEMAS = ["futebol", "seleção brasileira", "mercado da bola", "Brasileirão", "Libertadores", "Copa do Brasil", "CBF STJD"]
 
 
-def busca(veiculo, site, termo, apelido=None, dias=1):
-    """Busca no Google News por site, preservando a URL."""
-    xml = baixar(GOOGLE.format(q=urllib.parse.quote(f"{termo} site:{site} when:{dias}d"))) or ""
+COLETA_PAR = 5          # linhas simultâneas na coleta (Google News tolera; 429 vira falha graciosa)
+
+# Fontes que NÃO contam como imprensa na coleta por assunto (redes, sites de clube, federações).
+NAO_IMPRENSA = re.compile(r"instagram|facebook|youtube|tiktok|twitter|threads|\.gov|site oficial|"
+                          r"confedera|federa[çc][aã]o|\bcbf\b|\bconmebol\b|\bfifa\b", re.I)
+_VEIC_UOL = re.compile(r"uol", re.I)
+_VEIC_ALIAS = [
+    (re.compile(r"globoesporte|globo\s*esporte|ge\.globo|\bge\b", re.I), "ge"),
+    (re.compile(r"espn", re.I), "ESPN"),
+    (re.compile(r"lance", re.I), "Lance!"),
+    (re.compile(r"\bterra\b", re.I), "Terra"),
+    (re.compile(r"\br7\b|record", re.I), "R7"),
+    (re.compile(r"\bgoal\b", re.I), "Goal"),
+    (re.compile(r"tnt\s*sports", re.I), "TNT Sports"),
+    (re.compile(r"trivela", re.I), "Trivela"),
+]
+# Feeds RSS nativos conhecidos dos portais (o --teste confirma quais respondem; os demais vêm pelo firehose).
+FEEDS = [
+    ("Trivela", "https://trivela.com.br/feed/"),
+    ("UOL", "https://rss.uol.com.br/feed/esporte.xml"),
+]
+# Âncoras de outros esportes (consulta por assunto no Google Notícias).
+OUTROS_ESPORTES = [
+    ("vôlei", '"vôlei" OR voleibol Brasil'),
+    ("basquete/NBA", '"NBA" OR basquete Brasil'),
+    ("Fórmula 1", '"Fórmula 1" OR "F1" automobilismo'),
+    ("UFC/MMA", '"UFC" OR MMA'),
+    ("tênis", 'tênis ATP OR WTA Brasil'),
+    ("olímpicos", '"Olimpíadas" OR olímpico Brasil'),
+    ("futebol feminino", '"futebol feminino" Brasil'),
+]
+
+
+def _veiculo_de(fonte, url):
+    s = (fonte or "") + " " + (url or "")
+    if _VEIC_UOL.search(s):
+        return "UOL"
+    for rx, nome in _VEIC_ALIAS:
+        if rx.search(s):
+            return nome
+    return (limpar(fonte) or "?")[:40]
+
+
+def _itens_rss(xml, veiculo_fixo=None, apelido=None, clube=None):
+    """Lê itens de um RSS (Google Notícias ou feed de portal). Sem veículo fixo, atribui pelo <source> e filtra não-imprensa."""
     saida = []
-    for item in re.findall(r"<item>(.*?)</item>", xml, re.S):
-        m_data = re.search(r"<pubDate>(.*?)</pubDate>", item)
+    for item in re.findall(r"<item>(.*?)</item>", xml or "", re.S):
         m_tit = re.search(r"<title>(.*?)</title>", item, re.S)
         m_url = re.search(r"<link>(.*?)</link>", item, re.S)
-        if not (m_data and m_tit and m_url):
+        if not (m_tit and m_url):
             continue
-        quando = parsedate_to_datetime(m_data.group(1)).astimezone(BRT)
         titulo = re.sub(r" - [^-]+$", "", limpar(m_tit.group(1)))
-        if apelido and not re.search(apelido, titulo):
+        if not titulo or (apelido and not re.search(apelido, titulo)):
             continue
-        saida.append({"veiculo": veiculo, "titulo": titulo, "url": limpar(m_url.group(1)),
-                      "data": quando.date().isoformat()})
+        if veiculo_fixo:
+            veic = veiculo_fixo
+        else:
+            m_src = re.search(r"<source[^>]*>(.*?)</source>", item, re.S)
+            m_surl = re.search(r'<source url="([^"]*)"', item)
+            veic = _veiculo_de(m_src.group(1) if m_src else "", m_surl.group(1) if m_surl else "")
+            if NAO_IMPRENSA.search(veic):
+                continue
+        m_data = re.search(r"<pubDate>(.*?)</pubDate>", item)
+        try:
+            data = parsedate_to_datetime(m_data.group(1)).astimezone(BRT).date().isoformat()
+        except Exception:
+            data = agora().astimezone(BRT).date().isoformat()
+        it = {"veiculo": veic, "titulo": titulo, "url": limpar(m_url.group(1)), "data": data}
+        if clube:
+            it["clube"] = clube
+        saida.append(it)
     return saida
 
 
-def busca_clube(veiculo, site, clube, apelido, dias=1):
-    return [dict(x, clube=clube) for x in busca(veiculo, site, f'"{clube}"', apelido, dias)]
+def busca(veiculo, site, termo, apelido=None, dias=1):
+    """Google Notícias por site (veículo fixo). Termo vazio = firehose do portal (tudo recente do veículo)."""
+    q = (f"{termo} site:{site} when:{dias}d" if termo else f"site:{site} when:{dias}d")
+    return _itens_rss(baixar(GOOGLE.format(q=urllib.parse.quote(q))), veiculo_fixo=veiculo, apelido=apelido)
+
+
+def busca_tema(consulta, apelido=None, clube=None, dias=1):
+    """Google Notícias por ASSUNTO (sem filtro de site): pega todos os veículos, atribui pelo <source>."""
+    return _itens_rss(baixar(GOOGLE.format(q=urllib.parse.quote(f"{consulta} when:{dias}d"))), apelido=apelido, clube=clube)
+
+
+def feed_proprio(veiculo, url):
+    """Feed RSS nativo do portal (quando a URL é conhecida)."""
+    return _itens_rss(baixar(url), veiculo_fixo=veiculo)
 
 
 def coletar_largo(alvos):
@@ -76,21 +143,23 @@ def coletar_largo(alvos):
     alvos = set(alvos)
     tarefas = [("ge home", lambda: [{"veiculo": "ge", "titulo": i["titulo"], "url": i["url"], "data": i["quando"][:10]} for i in ge_home()]),
                ("UOL home", lambda: [{"veiculo": "UOL", "titulo": i["titulo"], "url": i["url"], "data": i["quando"][:10]} for i in uol_home()])]
-    # concorrência: futebol + seleção + 5 grandes
+    # L2 — profundidade por portal: firehose (tudo recente do veículo, inclusive outros esportes) + feeds nativos
     for veiculo, site in PORTAIS:
-        tarefas.append((f"{veiculo} futebol", lambda v=veiculo, s=site: busca(v, s, "futebol", dias=dias)))
-        tarefas.append((f"{veiculo} seleção", lambda v=veiculo, s=site: busca(v, s, "seleção brasileira", dias=dias)))
-        for clube in GRANDES:
-            apelido = CLUBES[clube][1]
-            tarefas.append((f"{veiculo} {clube}", lambda v=veiculo, s=site, c=clube, a=apelido: busca_clube(v, s, c, a, dias)))
-    # reforço UOL: temas + 5 grandes
+        tarefas.append((f"{veiculo} firehose", lambda v=veiculo, s=site: busca(v, s, "", dias=dias)))
+    tarefas.append(("UOL firehose", lambda: busca("UOL", "uol.com.br/esporte", "", dias=dias)))
+    for veiculo, url in FEEDS:
+        tarefas.append((f"{veiculo} feed", lambda v=veiculo, u=url: feed_proprio(v, u)))
+    # L1 — largura por assunto: um por clube (todos os do CLUBES) + outros esportes; veículo vem do <source>
+    for clube, (_, apelido) in CLUBES.items():
+        tarefas.append((f"tema {clube}", lambda c=clube, a=apelido: busca_tema(f'"{c}"', apelido=a, clube=c, dias=dias)))
+    for rotulo, consulta in OUTROS_ESPORTES:
+        tarefas.append((f"tema {rotulo}", lambda q=consulta: busca_tema(q, dias=dias)))
+    tarefas.append(("tema seleção", lambda: busca_tema('"seleção brasileira"', dias=dias)))
+    # reforço UOL por tema (ajuda o hedge a achar o que o UOL deu)
     for tema in UOL_TEMAS:
         tarefas.append((f"UOL {tema}", lambda t=tema: busca("UOL", "uol.com.br/esporte", t, dias=dias)))
-    for clube in GRANDES:
-        apelido = CLUBES[clube][1]
-        tarefas.append((f"UOL {clube}", lambda c=clube, a=apelido: busca_clube("UOL", "uol.com.br/esporte", c, a, dias)))
     itens, falhas = [], []
-    with cf.ThreadPoolExecutor(PARALELO) as ex:
+    with cf.ThreadPoolExecutor(COLETA_PAR) as ex:
         futuros = {ex.submit(f): n for n, f in tarefas}
         for fut in cf.as_completed(futuros):
             try:
@@ -101,7 +170,7 @@ def coletar_largo(alvos):
     for i in itens:
         if i.get("data") not in alvos:
             continue
-        chave = (i["data"], i["veiculo"], norm(i["titulo"]))
+        chave = (i["data"], norm(i["veiculo"]), norm(i["titulo"]))
         if chave not in vistos:
             vistos.add(chave)
             unicos.append(i)
@@ -113,17 +182,24 @@ def dossie(itens):
     linhas = []
     uol = [i for i in itens if i["veiculo"] == "UOL"]
     linhas.append(f"### NOSSO VEÍCULO — UOL ({len(uol)}) ###")
-    for i in uol[:60]:
+    for i in uol[:80]:
         linhas.append(f"[UOL {i['data']}] {i['titulo']} | {i['url']}")
-    linhas.append("\n### CONCORRÊNCIA (por veículo) ###")
+    linhas.append("\n### CONCORRÊNCIA (por veículo, maiores primeiro) ###")
     por_veiculo = {}
     for i in itens:
         if i["veiculo"] != "UOL":
             por_veiculo.setdefault(i["veiculo"], []).append(i)
-    for v, lst in por_veiculo.items():
+    ordenados = sorted(por_veiculo.items(), key=lambda kv: -len(kv[1]))
+    total, mostrados = 0, 0
+    for v, lst in ordenados:
+        if total > 400:
+            linhas.append(f"\n-- (+{len(ordenados) - mostrados} veículos menores; itens relevantes reaparecem nos blocos por clube/seleção) --")
+            break
+        mostrados += 1
         linhas.append(f"\n-- {v} ({len(lst)}) --")
-        for i in lst[:35]:
+        for i in lst[:25]:
             linhas.append(f"[{i['data']}] {i['titulo']} | {i['url']}")
+            total += 1
     for clube in GRANDES:
         rel = [i for i in itens if i.get("clube") == clube or re.search(CLUBES[clube][1], i["titulo"])]
         linhas.append(f"\n### CLUBE: {clube.upper()} ({len(rel)}) — UOL e concorrência ###")
