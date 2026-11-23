@@ -230,6 +230,7 @@ COMUM = """No dossiê, o bloco "NOSSO VEÍCULO — UOL" é o UOL; todos os outro
 Cada item do dossiê termina com um código curto (ex.: r42) — é a referência daquela matéria.
 Regras invioláveis:
 - Use SOMENTE itens do dossiê. Para citar uma matéria, copie o código EXATO (ex.: r42) no campo "ref"/"uolRef". NUNCA escreva um link, nem invente código. Item sem código (traço "-") não entra.
+- O código (ex.: r42) é SÓ para os campos "ref"/"uolRef". JAMAIS escreva o código no título, resumo, porque, apurar, títulos, formatos, comentário ou em qualquer texto que o leitor vê — ali vai só texto normal.
 - Descartar: "onde assistir", calendário, regulamento, retrospectiva, "tudo sobre".
 - Hedge do UOL: só diga que o UOL deu (uolDeu=true, com uolRef do bloco UOL) se achar a matéria no bloco UOL. Se não achar, uolDeu=false (= "não localizado no UOL, conferir"). NUNCA afirme que o UOL não deu."""
 
@@ -293,6 +294,16 @@ def chamar_claude(texto, sistema, tentativas=4):
     raise erro
 
 
+_REF_INLINE = re.compile(r"\s*\(?\br\d+\b\)?")
+
+
+def _scrub(s):
+    """Remove códigos ref (r42) que o modelo tenha vazado no texto que o leitor vê."""
+    if not isinstance(s, str):
+        return s
+    return re.sub(r"\s{2,}", " ", _REF_INLINE.sub("", s)).replace(" ,", ",").replace(" .", ".").strip()
+
+
 def _ancora(obj, mapa):
     """Troca o código ref citado pela URL real (via mapa); descarta ref inexistente (nada de link inventado)."""
     chave = "concorrentes" if "concorrentes" in obj else "concorrencia"
@@ -302,6 +313,7 @@ def _ancora(obj, mapa):
         if u:
             c["url"] = u
             c.pop("ref", None)
+            c["oque"] = _scrub(c.get("oque"))
             saida.append(c)
     obj[chave] = saida
     u = mapa.get(str(obj.get("uolRef", "")).strip())
@@ -311,6 +323,13 @@ def _ancora(obj, mapa):
         obj["uolDeu"] = False
         obj["uolUrl"] = ""
     obj.pop("uolRef", None)
+    # limpa códigos vazados no texto visível
+    for k in ("titulo", "resumo", "porque", "comentario", "tema", "clube"):
+        if k in obj:
+            obj[k] = _scrub(obj[k])
+    for k in ("apurar", "titulos", "formatos"):
+        if isinstance(obj.get(k), list):
+            obj[k] = [_scrub(x) for x in obj[k]]
     return obj
 
 
@@ -319,7 +338,7 @@ def balanco_do_dia(itens_dia):
     rel = chamar_claude(texto, SISTEMA_BALANCO)
     assuntos = [_ancora(a, mapa) for a in rel.get("assuntos", [])]
     assuntos = [a for a in assuntos if a["concorrentes"] or a["uolDeu"]]
-    return {"assuntos": assuntos, "placar": rel.get("placar", "")}
+    return {"assuntos": assuntos, "placar": _scrub(rel.get("placar", ""))}
 
 
 def correr_atras(itens_dia):
